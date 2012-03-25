@@ -1,6 +1,5 @@
 package com.mqtt.messenger;
 
-import java.lang.ref.WeakReference;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
@@ -156,11 +155,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         // reset status variable to initial state
         connectionStatus = MQTTConnectionStatus.INITIAL;
 
-        // create a binder that will let the Activity UI send
-        //   commands to the Service
-        mBinder = new LocalBinder<MQTTService>(this);
-
-        	
+        
         topicName = "temp123"; 
         		//Settings.System.getString(getContentResolver(),Secure.ANDROID_ID); //Unique Topic for this Client
         
@@ -339,10 +334,10 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             dataEnabledReceiver = null;
         }
 
-        if (mBinder != null) {
+        /*if (mBinder != null) {
             mBinder.close();
             mBinder = null;
-        }
+        }*/
     }
 
     /************************************************************************/
@@ -397,43 +392,164 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         notification.setLatestEventInfo(this, title, body, contentIntent);
         nm.notify(MQTT_NOTIFICATION_UPDATE, notification);
     }
-
-    /************************************************************************/
-    /*    METHODS - binding that allows access from the Actitivy            */
-    /************************************************************************/
-
-    // trying to do local binding while minimizing leaks - code thanks to
-    //   Geoff Bruckner - which I found at
-    //   http://groups.google.com/group/cw-android/browse_thread/thread/d026cfa71e48039b/c3b41c728fedd0e7?show_docid=c3b41c728fedd0e7
-
-    private LocalBinder<MQTTService> mBinder;
+    
+    //Binding Methods
+    private final IBinder mBinder = new LocalBinder();
+    public class LocalBinder extends Binder {
+        MQTTService getService() {
+            // Return this instance of LocalService so clients can call public methods
+            return MQTTService.this;
+        }
+    }
 
     @Override
-    public IBinder onBind(Intent intent)
-    {
+    public IBinder onBind(Intent intent) {
         return mBinder;
-    }
-    public class LocalBinder<S> extends Binder
-    {
-        private WeakReference<S> mService;
-
-        public LocalBinder(S service)
-        {
-            mService = new WeakReference<S>(service);
-        }
-        public S getService()
-        {
-            return mService.get();
-        }
-        public void close()
-        {
-            mService = null;
-        }
     }
 
     //
     // public methods that can be used by Activities that bind to the Service
     //
+
+    public void publishToTopic(String topicName, String message)
+
+    {
+        boolean published = false;
+
+        if (isAlreadyConnected() == false)
+        {
+            // quick sanity check - don't try and subscribe if we
+            //  don't have a connection
+
+            Log.e("mqtt", "Unable to publish as we are not connected");
+        }
+        else
+        {
+            try
+            {
+                mqttClient.publish(topicName, message.getBytes() ,1, false);
+                published = true;
+            }
+            catch (MqttNotConnectedException e)
+            {
+                Log.e("mqtt", "publish failed - MQTT not connected", e);
+            }
+            catch (IllegalArgumentException e)
+            {
+                Log.e("mqtt", "publish failed - illegal argument", e);
+            }
+            catch (MqttException e)
+            {
+                Log.e("mqtt", "publish failed - MQTT exception", e);
+            }
+        }
+
+        if (published == false)
+        {
+            //
+            // inform the app of the failure to subscribe so that the UI can
+            //  display an error
+            broadcastServiceStatus("Unable to publish");
+
+            //
+            // inform the user (for times when the Activity UI isn't running)
+            notifyUser("Unable to publish", "MQTT", "Unable to publish");
+        }
+    }
+    
+    public void subscribeToTopic(String topicName)
+    {
+        boolean subscribed = false;
+
+        if (isAlreadyConnected() == false)
+        {
+            // quick sanity check - don't try and subscribe if we
+            //  don't have a connection
+
+            Log.e("mqtt", "Unable to subscribe as we are not connected");
+        }
+        else
+        {
+            try
+            {
+                String[] topics = { topicName };
+                mqttClient.subscribe(topics, qualitiesOfService);
+
+                subscribed = true;
+            }
+            catch (MqttNotConnectedException e)
+            {
+                Log.e("mqtt", "subscribe failed - MQTT not connected", e);
+            }
+            catch (IllegalArgumentException e)
+            {
+                Log.e("mqtt", "subscribe failed - illegal argument", e);
+            }
+            catch (MqttException e)
+            {
+                Log.e("mqtt", "subscribe failed - MQTT exception", e);
+            }
+        }
+
+        if (subscribed == false)
+        {
+            //
+            // inform the app of the failure to subscribe so that the UI can
+            //  display an error
+            broadcastServiceStatus("Unable to subscribe");
+
+            //
+            // inform the user (for times when the Activity UI isn't running)
+            notifyUser("Unable to subscribe", "MQTT", "Unable to subscribe");
+        }
+    }
+    
+    public void unsubscribeToTopic(String topicName)
+    {
+        boolean unsubscribed = false;
+
+        if (isAlreadyConnected() == false)
+        {
+            // quick sanity check - don't try and subscribe if we
+            //  don't have a connection
+
+            Log.e("mqtt", "Unable to unsubscribe as we are not connected");
+        }
+        else
+        {
+            try
+            {
+                String[] topics = { topicName };
+                mqttClient.unsubscribe(topics);
+                unsubscribed = true;
+            }
+            catch (MqttNotConnectedException e)
+            {
+                Log.e("mqtt", "unsubscribe failed - MQTT not connected", e);
+            }
+            catch (IllegalArgumentException e)
+            {
+                Log.e("mqtt", "unsubscribe failed - illegal argument", e);
+            }
+            catch (MqttException e)
+            {
+                Log.e("mqtt", "unsubscribe failed - MQTT exception", e);
+            }
+        }
+
+        if (unsubscribed == false)
+        {
+            //
+            // inform the app of the failure to subscribe so that the UI can
+            //  display an error
+            broadcastServiceStatus("Unable to unsubscribe");
+
+            //
+            // inform the user (for times when the Activity UI isn't running)
+            notifyUser("Unable to unsubscribe", "MQTT", "Unable to unsubscribe");
+        }
+    }
+
 
     public MQTTConnectionStatus getConnectionStatus()
     {
@@ -691,148 +807,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         }
     }
 
-    /*
-     * Send a request to the message broker to be sent messages published with
-     *  the specified topic name. Wildcards are allowed.
-     */
-    public void publishToTopic(String topicName, String message)
-    {
-        boolean published = false;
-
-        if (isAlreadyConnected() == false)
-        {
-            // quick sanity check - don't try and subscribe if we
-            //  don't have a connection
-
-            Log.e("mqtt", "Unable to publish as we are not connected");
-        }
-        else
-        {
-            try
-            {
-                mqttClient.publish(topicName, message.getBytes() ,1, false);
-                published = true;
-            }
-            catch (MqttNotConnectedException e)
-            {
-                Log.e("mqtt", "publish failed - MQTT not connected", e);
-            }
-            catch (IllegalArgumentException e)
-            {
-                Log.e("mqtt", "publish failed - illegal argument", e);
-            }
-            catch (MqttException e)
-            {
-                Log.e("mqtt", "publish failed - MQTT exception", e);
-            }
-        }
-
-        if (published == false)
-        {
-            //
-            // inform the app of the failure to subscribe so that the UI can
-            //  display an error
-            broadcastServiceStatus("Unable to publish");
-
-            //
-            // inform the user (for times when the Activity UI isn't running)
-            notifyUser("Unable to publish", "MQTT", "Unable to publish");
-        }
-    }
-    public void subscribeToTopic(String topicName)
-    {
-        boolean subscribed = false;
-
-        if (isAlreadyConnected() == false)
-        {
-            // quick sanity check - don't try and subscribe if we
-            //  don't have a connection
-
-            Log.e("mqtt", "Unable to subscribe as we are not connected");
-        }
-        else
-        {
-            try
-            {
-                String[] topics = { topicName };
-                mqttClient.subscribe(topics, qualitiesOfService);
-
-                subscribed = true;
-            }
-            catch (MqttNotConnectedException e)
-            {
-                Log.e("mqtt", "subscribe failed - MQTT not connected", e);
-            }
-            catch (IllegalArgumentException e)
-            {
-                Log.e("mqtt", "subscribe failed - illegal argument", e);
-            }
-            catch (MqttException e)
-            {
-                Log.e("mqtt", "subscribe failed - MQTT exception", e);
-            }
-        }
-
-        if (subscribed == false)
-        {
-            //
-            // inform the app of the failure to subscribe so that the UI can
-            //  display an error
-            broadcastServiceStatus("Unable to subscribe");
-
-            //
-            // inform the user (for times when the Activity UI isn't running)
-            notifyUser("Unable to subscribe", "MQTT", "Unable to subscribe");
-        }
-    }
-    
-    public void unsubscribeToTopic(String topicName)
-    {
-        boolean unsubscribed = false;
-
-        if (isAlreadyConnected() == false)
-        {
-            // quick sanity check - don't try and subscribe if we
-            //  don't have a connection
-
-            Log.e("mqtt", "Unable to unsubscribe as we are not connected");
-        }
-        else
-        {
-            try
-            {
-                String[] topics = { topicName };
-                mqttClient.unsubscribe(topics);
-                unsubscribed = true;
-            }
-            catch (MqttNotConnectedException e)
-            {
-                Log.e("mqtt", "unsubscribe failed - MQTT not connected", e);
-            }
-            catch (IllegalArgumentException e)
-            {
-                Log.e("mqtt", "unsubscribe failed - illegal argument", e);
-            }
-            catch (MqttException e)
-            {
-                Log.e("mqtt", "unsubscribe failed - MQTT exception", e);
-            }
-        }
-
-        if (unsubscribed == false)
-        {
-            //
-            // inform the app of the failure to subscribe so that the UI can
-            //  display an error
-            broadcastServiceStatus("Unable to unsubscribe");
-
-            //
-            // inform the user (for times when the Activity UI isn't running)
-            notifyUser("Unable to unsubscribe", "MQTT", "Unable to unsubscribe");
-        }
-    }
-
-    /*
+       /*
      * Terminates a connection to the message broker.
      */
     private void disconnectFromBroker()
@@ -884,7 +859,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     /*
      * Checks if the MQTT client thinks it has an active connection
      */
-    private boolean isAlreadyConnected()
+    public boolean isAlreadyConnected()
     {
         return ((mqttClient != null) && (mqttClient.isConnected() == true));
     }

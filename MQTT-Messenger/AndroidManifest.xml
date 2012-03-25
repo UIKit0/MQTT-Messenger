@@ -23,7 +23,6 @@
         
          <activity
             android:name=".Dashboard">
-             
          </activity>
 		<service android:name=".MQTTService"></service>
     </application>
