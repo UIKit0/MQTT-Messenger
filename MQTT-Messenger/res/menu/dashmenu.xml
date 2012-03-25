@@ -12,14 +12,10 @@
         android:icon="@android:drawable/ic_menu_delete"
          />
     <item android:id="@+id/dashitem4"
-        android:title="Logout"
-        android:icon="@android:drawable/ic_menu_revert"
-         />
-    <item android:id="@+id/dashitem5"
         android:title="Quit"
         android:icon="@android:drawable/ic_menu_close_clear_cancel"
          />
-        <item android:id="@+id/dashitem6"
+        <item android:id="@+id/dashitem5"
         android:title="About"
         android:icon="@android:drawable/ic_menu_info_details"
          />

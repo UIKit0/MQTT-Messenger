@@ -1,7 +1,6 @@
 package com.mqtt.messenger;
 
 import android.app.Activity;
-
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
@@ -10,39 +9,36 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.Spinner;
-import android.widget.Toast;
 
 public class StartPage extends Activity {
-	public Spinner e1;
-	public EditText e2;
+
+	public EditText uname,pwd;
+	private String username,password;
 	AlertDialog alert;
 
 	@Override
-	public void onCreate(Bundle savedInstanceState) {	
+	public void onCreate(Bundle savedInstanceState) {
+		//Basic stuff
 		super.onCreate(savedInstanceState);
-		
-		requestWindowFeature(Window.FEATURE_NO_TITLE);
-		
+		requestWindowFeature(Window.FEATURE_NO_TITLE);	//hide the title bar
 		setContentView(R.layout.startpage);
-
-		Spinner spinner = (Spinner) findViewById(R.id.spinner1);
-		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
-				this, R.array.server_array,
-				android.R.layout.simple_spinner_item);
-		adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-		spinner.setAdapter(adapter);
 		
-		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setMessage("\nMQTT Messenger V1.0\n");
-		alert = builder.create();
-
-		Bundle extras = getIntent().getExtras();
-		if(extras!=null)
-			Toast.makeText(this, extras.getString("msg"), Toast.LENGTH_SHORT).show(); 
+		if(MQTTService.SERVICE_STAT==true)
+		{
+			Intent i = new Intent(StartPage.this, Dashboard.class);
+			startActivity(i);
+			finish();
+		}
+		else
+		{
+			//Info Dialog Builder
+			AlertDialog.Builder builder = new AlertDialog.Builder(this);
+			builder.setMessage("\nMQTT Messenger Application: Version 1.0\n");
+			alert = builder.create();
+		}
 	}
+
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -54,28 +50,28 @@ public class StartPage extends Activity {
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
-		case R.id.startitem1:
-			finish();
+		case R.id.startitem1:	finish();
 			break;
-		case R.id.startitem2: alert.show();
+		case R.id.startitem2:	alert.show();
 			break;
 		default:
 			break;
 		}
 		return true;
 	}
-
+	
 	public void processLogin(View v) {
-
-		e1 = (Spinner) findViewById(R.id.spinner1);
-		String server = e1.getSelectedItem().toString();
-		e2 = (EditText) findViewById(R.id.editText2);
-		String port = e2.getText().toString();
+		
+		uname = (EditText) findViewById(R.id.editText1);
+		username = uname.getText().toString();
+		pwd = (EditText) findViewById(R.id.editText2);
+		password = pwd.getText().toString();
 		
 		Intent i = new Intent(StartPage.this, Dashboard.class);
-		i.putExtra("server", server);
-		i.putExtra("port", port);
+		i.putExtra("username", username);
+		i.putExtra("password", password);
 		startActivity(i);
 		finish();
 	}
+
 }

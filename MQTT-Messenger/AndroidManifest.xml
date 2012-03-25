@@ -7,19 +7,24 @@
     <uses-sdk android:minSdkVersion="10" />
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <application
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name" >
         <activity
             android:label="@string/app_name"
-            android:name="com.mqtt.messenger.StartPage" >
+            android:name=".StartPage" >
             <intent-filter >
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
          <activity
-            android:name="com.mqtt.messenger.Dashboard"></activity>
+            android:name=".Dashboard">
+             
+         </activity>
+		<service android:name=".MQTTService"></service>
     </application>
 </manifest>

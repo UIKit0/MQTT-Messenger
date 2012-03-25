@@ -2,216 +2,214 @@ package com.mqtt.messenger;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.ProgressDialog;
-import android.content.DialogInterface;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.provider.Settings.Secure;
+import android.os.IBinder;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.View;
 import android.view.Window;
-import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.ibm.mqtt.MqttClient;
-import com.ibm.mqtt.MqttException;
-import com.ibm.mqtt.MqttPersistenceException;
-import com.ibm.mqtt.MqttSimpleCallback;
+import com.mqtt.messenger.MQTTService.LocalBinder;
 
 public class Dashboard extends Activity {
+
 	
-	private String android_id;
-	private MqttClient client;
+	private StatusUpdateReceiver statusUpdateIntentReceiver;
+    private MQTTMessageReceiver  messageIntentReceiver;
+    
+	private String username, password;	
 	private TextView messageView;
-	private String server;
-	private int port;
 	private ScrollView scroller;
 	private AlertDialog alert;
 	private ProgressDialog pd;
-	EditText input;
+    
     @Override
     public void onCreate(Bundle savedInstanceState) {
     	
-        super.onCreate(savedInstanceState);
-        
+        //basic stuff
+    	super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        
         setContentView(R.layout.dashpage);
-        
-        server = getIntent().getStringExtra("server");
-        port = Integer.parseInt(getIntent().getStringExtra("port"));
-        
+
+		//Info Dialog Builder
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setMessage("\nMQTT Messenger Application: Version 1.0\n");
+		alert = builder.create();
+		
 		messageView = (TextView) findViewById(R.id.message);
-		android_id = Secure.getString(this.getContentResolver(),Secure.ANDROID_ID);
 		scroller = (ScrollView) findViewById(R.id.scrollView1);
 		
-		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setMessage("\nMQTT Messenger V1.0\n");
-		alert = builder.create();
-
-		
-		 pd = ProgressDialog.show(this, "Connecting", "Please wait..", true,false);
-		 new Thread() { 
-			 int flag;
-			 public void run() { 
-				 if(connect())
-					 flag=1;
-				 else 
-					 flag=0;
-				 handlerConnect.sendMessage(Message.obtain(handlerConnect,flag)); } }.start();	//Connect in a new thread!
-		 
+        statusUpdateIntentReceiver = new StatusUpdateReceiver();
+        IntentFilter intentSFilter = new IntentFilter(MQTTService.MQTT_STATUS_INTENT);
+        registerReceiver(statusUpdateIntentReceiver, intentSFilter);
+        
+        messageIntentReceiver = new MQTTMessageReceiver();
+        IntentFilter intentCFilter = new IntentFilter(MQTTService.MQTT_MSG_RECEIVED_INTENT);
+        registerReceiver(messageIntentReceiver, intentCFilter);
+        
+		if(MQTTService.SERVICE_STAT==false)	//only if the service has been shutdown..
+		{
+	        //Start the Service
+			Intent svc = new Intent(this, MQTTService.class);
+	        startService(svc);
+	        	        
+			//Following stuff only for Logging in for the First Time
+	        username = getIntent().getStringExtra("username");
+	        password = getIntent().getStringExtra("password");
+			pd = ProgressDialog.show(this, "Registering", "Please wait..", true,false);
+			 /* new Thread() { 
+				 int flag;
+				 public void run() { 
+					 
+					 } }.start();	//Register in a new thread! */
+			pd.dismiss();
+		}
+		Log.d("Debug","Exiting onCreate");
     }
     
-    final Handler handlerConnect = new Handler() {
-		public void handleMessage(Message msg) {
-			pd.dismiss();
-			if(msg.what==0)
-				{
-				Intent i = new Intent (Dashboard.this, StartPage.class);
-				i.putExtra("msg", "Connect Failed!");
-				startActivity(i);
-				finish();
-				}
-			
-		}
-	};
-    final Handler handler = new Handler() {
-		public void handleMessage(Message msg) {
-			messageView.append("\n\n" + msg.getData().getString("topic")+"\n"+msg.getData().getString("message")+"\n\n");
-			scroller.post(new Runnable() {
-				   public void run() {
-				        scroller.scrollTo(messageView.getMeasuredWidth(), messageView.getMeasuredHeight());
-				    }
-				});
-		}
-		
-	};
-
-	private boolean connect() {
-		try {
-			messageView.setText("");
-			client = (MqttClient) MqttClient.createMqttClient("tcp://"+server+":"+port, null);
-			client.registerSimpleHandler(new MessageHandler());
-			client.connect("HM" + android_id, true, (short) 240);			
-			return true;
-		} catch (MqttException e) {
-			e.printStackTrace();
-			return false;
-		}
-	}
-
-	@SuppressWarnings("unused")
-	private class MessageHandler implements MqttSimpleCallback 
-	{
-		public void publishArrived(String _topic, byte[] payload, int qos, boolean retained) throws Exception 
-		{
-			String _message = new String(payload);
-			Bundle b = new Bundle();
-			b.putString("topic", _topic);
-			b.putString("message", _message);
-			Message msg = handler.obtainMessage();
-			msg.setData(b);
-			handler.sendMessage(msg);
-			Log.d("MQTT", _message);
-		}
-
-		public void connectionLost() throws Exception 
-		{
-			client = null;
-			Log.v("HelloMQTT", "connection dropped");
-			Thread t = new Thread(new Runnable() {
-
-				public void run() 
-				{
-					do {// pause for 5 seconds and try again;
-						Log.v("HelloMQTT",
-								"sleeping for 5 seconds before trying to reconnect");
-						try {
-							Thread.sleep(5 * 1000);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-					} while (!connect());
-					System.err.println("reconnected");
-				}
-			});
-			t.start();
-		}
-	}
-	
-    
+    //Menu Functions 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.dashmenu, menu);
         return true;
     }
+    
+    @Override
+    protected void onDestroy()
+    {
+    	Log.d("Debug","Entering onDestroy");
+    	super.onDestroy();
+        unregisterReceiver(statusUpdateIntentReceiver);
+        unregisterReceiver(messageIntentReceiver);
+        Log.d("Debug","Exiting onDestroy");
+    } 
+    
+    public void stopservice() //UI to be implemented Later..
+    {
+        Intent svc = new Intent(this, MQTTService.class);
+        stopService(svc); 
+    }
+    
+    
+    public class StatusUpdateReceiver extends BroadcastReceiver
+    {
+        @Override
+        public void onReceive(Context context, Intent intent)
+        {
+            Bundle notificationData = intent.getExtras();
+            String newStatus = notificationData.getString(MQTTService.MQTT_STATUS_MSG);
+            Log.d("StatusReceiver", newStatus);
+        }
+    }
+    public class MQTTMessageReceiver extends BroadcastReceiver
+    {
+        @Override
+        public void onReceive(Context context, Intent intent)
+        {
+            Bundle notificationData = intent.getExtras();
+            String newTopic = notificationData.getString(MQTTService.MQTT_MSG_RECEIVED_TOPIC);
+            String newData  = notificationData.getString(MQTTService.MQTT_MSG_RECEIVED_MSG);
+            
+            //Process the Received Message..
+            Log.d("NotificationReceiver", newTopic+" "+newData);
+            messageView.append("\nTopic: " + newTopic + "\nMessage: " + newData +"\n\n");
+    		scroller.post(new Runnable() {
+				   public void run() {
+				        scroller.scrollTo(messageView.getMeasuredWidth(), messageView.getMeasuredHeight());
+				    }
+				});
+        }
+    }
+    
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-        case R.id.dashitem1:		try {
-	        								client.publish("NITTrichy","Test Message".getBytes() ,1, false);
-	        						} catch ( MqttException e){
-	        						Toast.makeText(this, "Publish Failed!", Toast.LENGTH_SHORT).show();
-	        						}        
-	        						Toast.makeText(this, "Publish Success!", Toast.LENGTH_SHORT).show();
+        case R.id.dashitem1:		//Start a new activity to publish!
+        	bindService(new Intent(this, MQTTService.class),
+    	            new ServiceConnection() {
+    	                @SuppressWarnings("unchecked")
+    	                @Override
+    	                public void onServiceConnected(ComponentName className, final IBinder service)
+    	                {
+    	                    MQTTService mqttService = ((LocalBinder<MQTTService>)service).getService();
+    	                    mqttService.publishToTopic("nittrichy", "hello world");
+    	                    unbindService(this);
+    	                }
+    	                @Override
+    	                public void onServiceDisconnected(ComponentName name) {}
+    	            },0);
 	        						break;
         						
-        case R.id.dashitem2:	try {
-					        	String topics[] = { "#" };
-								int qos[] = { 1 };
-								client.subscribe(topics, qos);
-								} catch ( MqttException e){
-									Toast.makeText(this, "Subscribe Failed!", Toast.LENGTH_SHORT).show();
-								}
-								Toast.makeText(this, "Subscribe Success!", Toast.LENGTH_SHORT).show();
-								messageView.setText("");
+        case R.id.dashitem2:	
+        	bindService(new Intent(this, MQTTService.class),
+    	            new ServiceConnection() {
+    	                @SuppressWarnings("unchecked")
+    	                @Override
+    	                public void onServiceConnected(ComponentName className, final IBinder service)
+    	                {
+    	                    MQTTService mqttService = ((LocalBinder<MQTTService>)service).getService();
+    	                    mqttService.subscribeToTopic("atkal");
+    	                    unbindService(this);
+    	                }
+    	                @Override
+    	                public void onServiceDisconnected(ComponentName name) {}
+    	            },0); 
         						break;
         
-        case R.id.dashitem3:	try {
-					        	String topics[] = { "#" };
-								client.unsubscribe(topics);
-								} catch ( MqttException e){
-									Toast.makeText(this, "Unsubscribe Failed!", Toast.LENGTH_SHORT).show();
-								}
-								Toast.makeText(this, "Unsubscribe Success!", Toast.LENGTH_SHORT).show();
-								messageView.setText("");
+        case R.id.dashitem3:	
+
+        	bindService(new Intent(this, MQTTService.class),
+    	            new ServiceConnection() {
+    	                @SuppressWarnings("unchecked")
+    	                @Override
+    	                public void onServiceConnected(ComponentName className, final IBinder service)
+    	                {
+    	                    MQTTService mqttService = ((LocalBinder<MQTTService>)service).getService();
+    	                    mqttService.unsubscribeToTopic("atkal");
+    	                    unbindService(this);
+    	                }
+    	                @Override
+    	                public void onServiceDisconnected(ComponentName name) {}
+    	            },0); 
         						break;
-        
-        case R.id.dashitem4:	try {
-									client.disconnect();
-									client.terminate();
-								} catch (MqttPersistenceException e) {
-									e.printStackTrace();
-								}
-        						Intent i = new Intent (Dashboard.this, StartPage.class);
-        						startActivity(i);
+       
+        case R.id.dashitem4:	stopservice();
         						finish();
-        						break;
-        						
-        case R.id.dashitem5:	try {
-								client.disconnect();
-								client.terminate();
-							} catch (MqttPersistenceException e) {
-								e.printStackTrace();
-							}
-	        					finish();
 								break;
 								
-        case R.id.dashitem6:	alert.show();
+        case R.id.dashitem5:	alert.show();
         						break;
             default:     		break;
         }
         return true;
     }
+    
+    public void getPendingMessages(){
+    	bindService(new Intent(this, MQTTService.class),
+	            new ServiceConnection() {
+	                @SuppressWarnings("unchecked")
+	                @Override
+	                public void onServiceConnected(ComponentName className, final IBinder service)
+	                {
+	                    MQTTService mqttService = ((LocalBinder<MQTTService>)service).getService();
+	                    mqttService.rebroadcastReceivedMessages();
+	                    unbindService(this);
+	                }
+	                @Override
+	                public void onServiceDisconnected(ComponentName name) {}
+	            },
+	            0); 
+    }
+      
 }	
