@@ -92,12 +92,11 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
 
     private String          brokerHostName       = "honeybeez.in";		//Custom Server
-    private String          topicName            = "";    
+    private String          initialTopicName            = "";    
 
     // defaults - this sample uses very basic defaults for it's interactions
     //   with message brokers
     private int             brokerPortNumber     = 1883;	//Incoming
-    private int             brokerPortNumberOut  = 1884;	//Outgoing
     
     private MqttPersistence usePersistence       = null;
     private boolean         cleanStart           = false;
@@ -156,7 +155,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         connectionStatus = MQTTConnectionStatus.INITIAL;
 
         
-        topicName = "temp123"; 
+        initialTopicName = "temp123"; 
         		//Settings.System.getString(getContentResolver(),Secure.ANDROID_ID); //Unique Topic for this Client
         
         // register to be notified whenever the user changes their preferences
@@ -278,7 +277,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
                     // note that this topicName could include a wildcard, so
                     //  even just with one subscription, we could receive
                     //  messages for multiple topics
-                    subscribeToTopic(topicName);
+                    subscribeToTopic(initialTopicName);
                 }
             }
             else
@@ -657,7 +656,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
             // try to reconnect
             if (connectToBroker()) {
-                subscribeToTopic(topicName);
+                subscribeToTopic(initialTopicName);
             }
         }
 
@@ -926,7 +925,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
                 {
                     // we subscribe to a topic - registering to receive push
                     //  notifications with a particular key
-                    subscribeToTopic(topicName);
+                    subscribeToTopic(initialTopicName);
                 }
             }
 
@@ -1015,7 +1014,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
                 // reconnect
                 if (connectToBroker()) {
-                    subscribeToTopic(topicName);
+                    subscribeToTopic(initialTopicName);
                 }
             }
 

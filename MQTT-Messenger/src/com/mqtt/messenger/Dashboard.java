@@ -60,7 +60,11 @@ public class Dashboard extends Activity {
         IntentFilter intentCFilter = new IntentFilter(MQTTService.MQTT_MSG_RECEIVED_INTENT);
         registerReceiver(messageIntentReceiver, intentCFilter);
         
-		if(MQTTService.SERVICE_STAT==false)	//only if the service has been shutdown..
+		 //Bind to the Service
+		 Intent intent = new Intent(this, MQTTService.class);
+	     bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+	     
+        if(MQTTService.SERVICE_STAT==false)	//only if the service has been shutdown..
 		{
 	        //Start the Service
 			Intent svc = new Intent(Dashboard.this, MQTTService.class);
@@ -72,10 +76,6 @@ public class Dashboard extends Activity {
 	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
 	        //Handle Registration
 		}
-		
-		 //Bind to the Service
-		 Intent intent = new Intent(this, MQTTService.class);
-	     bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 	     
 		Log.d("Debug","Exiting onCreate");
     }
