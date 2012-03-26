@@ -2,6 +2,7 @@ package com.mqtt.messenger;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -9,7 +10,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
 import android.util.Log;
@@ -19,6 +22,7 @@ import android.view.MenuItem;
 import android.view.Window;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.mqtt.messenger.MQTTService.LocalBinder;
 
@@ -27,7 +31,8 @@ public class Dashboard extends Activity {
 	
 	private MQTTService mqttService;
 	private boolean mBound = false;
-	
+	private boolean serverConnected = false;
+	private int registerResponse = 0;
 	private StatusUpdateReceiver statusUpdateIntentReceiver;
     private MQTTMessageReceiver  messageIntentReceiver;
     
@@ -35,6 +40,7 @@ public class Dashboard extends Activity {
 	private TextView messageView;
 	private ScrollView scroller;
 	private AlertDialog alert;
+	private ProgressDialog pd;
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -60,6 +66,7 @@ public class Dashboard extends Activity {
         IntentFilter intentCFilter = new IntentFilter(MQTTService.MQTT_MSG_RECEIVED_INTENT);
         registerReceiver(messageIntentReceiver, intentCFilter);
         
+        
 		 //Bind to the Service
 		 Intent intent = new Intent(this, MQTTService.class);
 	     bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
@@ -70,16 +77,80 @@ public class Dashboard extends Activity {
 			Intent svc = new Intent(Dashboard.this, MQTTService.class);
 	        startService(svc);
 	        	        
+		     
 			//Following stuff only for Logging in for the First Time
 	        username = getIntent().getStringExtra("username");
 	        password = getIntent().getStringExtra("password");
 	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
-	        //Handle Registration
+	        
+	        new Thread() {
+	        public void run() {
+	        	while(!serverConnected){
+		        	try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+	        	}
+	        bindService(new Intent(Dashboard.this, MQTTService.class),
+	                new ServiceConnection() {
+	                    @Override
+	                    public void onServiceConnected(ComponentName className, final IBinder service)
+	                    {
+	                        MQTTService mqttService = ((LocalBinder)service).getService();
+	                        mqttService.publishToTopic("REGISTER", phone_id+"#"+username+"#"+password);
+	                        unbindService(this);
+	                    }
+	                    @Override
+	                    public void onServiceDisconnected(ComponentName name) {}
+	                },
+	                0); 
+	        }
+	        }.start();
+	        
+	        pd = ProgressDialog.show(this, "Registering", "Please Wait..", true, false);
+	        new Thread() {
+	        	public void run(){
+	        		while(registerResponse==0){
+	        			try {
+							Thread.sleep(100);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+	        		}
+	        		if(registerResponse==1)
+	        			handler.sendMessage(Message.obtain(handler, 1));
+	        		else if(registerResponse==2)
+	        			handler.sendMessage(Message.obtain(handler, 2));
+	        	}
+	        }.start();
 		}
 	     
 		Log.d("Debug","Exiting onCreate");
     }
     
+    private Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+                pd.dismiss();
+                if(msg.what==1)
+                {
+                	Toast.makeText(getBaseContext(), "Login Success!", Toast.LENGTH_SHORT).show();
+                }
+                else if(msg.what==2)
+                {
+                	Toast.makeText(getBaseContext(), "Login Failed! Try Again!", Toast.LENGTH_SHORT).show();
+            		/* Intent i = new Intent(Dashboard.this, StartPage.class);
+            		i.putExtra("login", "Login Error. Please Try Again");
+        			startActivity(i); */
+                	stopservice();
+                	finish();
+
+                }
+        }
+};
     
     @Override 
     public void onStop(){
@@ -93,6 +164,7 @@ public class Dashboard extends Activity {
     @Override
     protected void onDestroy()
     {
+
     	Log.d("Debug","Entering onDestroy");
     	super.onDestroy();
         unregisterReceiver(statusUpdateIntentReceiver);
@@ -124,6 +196,8 @@ public class Dashboard extends Activity {
             Bundle notificationData = intent.getExtras();
             String newStatus = notificationData.getString(MQTTService.MQTT_STATUS_MSG);
             Log.d("StatusReceiver", newStatus);
+            if(newStatus.equals("Connected"))
+            	serverConnected = true;
         }
     }
     public class MQTTMessageReceiver extends BroadcastReceiver
@@ -134,15 +208,23 @@ public class Dashboard extends Activity {
             Bundle notificationData = intent.getExtras();
             String newTopic = notificationData.getString(MQTTService.MQTT_MSG_RECEIVED_TOPIC);
             String newData  = notificationData.getString(MQTTService.MQTT_MSG_RECEIVED_MSG);
-            
             Log.d("NotificationReceiver", newTopic+" "+newData);
             
+            if(newTopic.equals(phone_id))	//Handle Response from MQTT Server
+            {
+            	if(newData.equals("REGISTER_SUCCESS"))
+            		registerResponse=1;
+            	else if(newData.equals("REGISTER_FAILURE"))
+            		registerResponse=2;
+            }
+            
+            else {
             messageView.append("\nTopic: " + newTopic + "\nMessage: " + newData +"\n\n");
     		scroller.post(new Runnable() {
 				   public void run() {
 				        scroller.scrollTo(messageView.getMeasuredWidth(), messageView.getMeasuredHeight());
 				    }
-				});
+				}); }
         }
     }
     

@@ -11,6 +11,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.EditText;
+import android.widget.Toast;
 
 public class StartPage extends Activity {
 
@@ -37,7 +38,14 @@ public class StartPage extends Activity {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			builder.setMessage("\nMQTT Messenger Application: Version 1.0\n");
 			alert = builder.create();
+			
+			  Bundle extras = getIntent().getExtras();
+			    if(extras != null)
+			    {
+			        Toast.makeText(this, extras.getString("login"), Toast.LENGTH_SHORT);
+			    }
 		}
+		
 	}
 
 

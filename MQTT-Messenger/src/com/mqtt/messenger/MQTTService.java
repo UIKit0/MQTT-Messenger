@@ -155,8 +155,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         connectionStatus = MQTTConnectionStatus.INITIAL;
 
         
-        initialTopicName = "temp123"; 
-        		//Settings.System.getString(getContentResolver(),Secure.ANDROID_ID); //Unique Topic for this Client
+        initialTopicName = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID); //Unique Topic for this Client
         
         // register to be notified whenever the user changes their preferences
         //  relating to background data use - so that we can respect the current
@@ -702,7 +701,9 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             //
             // inform the user (for times when the Activity UI isn't running)
             //   that there is new data available
-            notifyUser("New data received", topic, messageBody);
+            
+            if(!topic.equals(initialTopicName))	//Check if Server Response
+            	notifyUser("New data received", topic, messageBody);
         }
 
         // receiving this message will have kept the connection alive for us, so
