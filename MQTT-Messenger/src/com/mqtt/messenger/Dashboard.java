@@ -6,6 +6,7 @@ import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -16,6 +17,7 @@ import android.os.Message;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -32,11 +34,11 @@ public class Dashboard extends Activity {
 	private MQTTService mqttService;
 	private boolean mBound = false;
 	private boolean serverConnected = false;
+	private String username, password, phone_id;
 	private int registerResponse = 0;
 	private StatusUpdateReceiver statusUpdateIntentReceiver;
     private MQTTMessageReceiver  messageIntentReceiver;
     
-	private String username, password, phone_id;
 	private TextView messageView;
 	private ScrollView scroller;
 	private AlertDialog alert;
@@ -83,7 +85,17 @@ public class Dashboard extends Activity {
 	        password = getIntent().getStringExtra("password");
 	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
 	        
-	        new Thread() {
+	        processLogin();
+
+		}
+	     
+		Log.d("Debug","Exiting onCreate");
+    }
+    
+    public void processLogin(){
+    	
+    	//wait till service is connected
+    	new Thread() {
 	        public void run() {
 	        	while(!serverConnected){
 		        	try {
@@ -93,6 +105,8 @@ public class Dashboard extends Activity {
 						e.printStackTrace();
 					}
 	        	}
+	        	
+	        //publish register message
 	        bindService(new Intent(Dashboard.this, MQTTService.class),
 	                new ServiceConnection() {
 	                    @Override
@@ -110,6 +124,17 @@ public class Dashboard extends Activity {
 	        }.start();
 	        
 	        pd = ProgressDialog.show(this, "Registering", "Please Wait..", true, false);
+	        pd.setOnKeyListener(new DialogInterface.OnKeyListener() {
+	            @Override
+	            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+	                if (keyCode == KeyEvent.KEYCODE_SEARCH && event.getRepeatCount() == 0) {
+	                    return true; // Pretend we processed it
+	                }
+	                return false; // Any other keys are still processed as normal
+	            }
+	        });
+	        timerDelayRemoveDialog(10000,pd);	//timeout after 10 seconds
+	        //wait for response and proceed accordingly
 	        new Thread() {
 	        	public void run(){
 	        		while(registerResponse==0){
@@ -126,9 +151,22 @@ public class Dashboard extends Activity {
 	        			handler.sendMessage(Message.obtain(handler, 2));
 	        	}
 	        }.start();
-		}
-	     
-		Log.d("Debug","Exiting onCreate");
+	        
+    }
+    
+    public void timerDelayRemoveDialog(long time, final ProgressDialog d){
+        Handler handler = new Handler(); 
+        handler.postDelayed(new Runnable() {           
+            public void run() {
+            	if(d.isShowing())
+                {
+            		d.dismiss();
+            		Toast.makeText(getBaseContext(), "Connection Timed out! Try Again!", Toast.LENGTH_SHORT).show();
+            		stopservice();
+            		finish();
+                }
+            }
+        }, time); 
     }
     
     private Handler handler = new Handler() {
@@ -142,9 +180,6 @@ public class Dashboard extends Activity {
                 else if(msg.what==2)
                 {
                 	Toast.makeText(getBaseContext(), "Login Failed! Try Again!", Toast.LENGTH_SHORT).show();
-            		/* Intent i = new Intent(Dashboard.this, StartPage.class);
-            		i.putExtra("login", "Login Error. Please Try Again");
-        			startActivity(i); */
                 	stopservice();
                 	finish();
 
@@ -152,7 +187,14 @@ public class Dashboard extends Activity {
         }
 };
     
-    @Override 
+/* @Override 
+	public void onResume(){
+		super.onResume();
+		if(loggedIn==false)
+			processLogin();
+	}	 */
+
+    @Override  
     public void onStop(){
     	super.onStop();
     	 if (mBound) {
