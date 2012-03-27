@@ -6,7 +6,6 @@ import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -17,7 +16,6 @@ import android.os.Message;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -34,8 +32,11 @@ public class Dashboard extends Activity {
 	private MQTTService mqttService;
 	private boolean mBound = false;
 	private boolean serverConnected = false;
-	private String username, password, phone_id;
-	private int registerResponse = 0;
+	private String phone_id;
+	/*private String username, password;
+	private int registerResponse = 0; */
+	private String listOfTopics = "";
+	private boolean topicsUpdated = false;
 	private StatusUpdateReceiver statusUpdateIntentReceiver;
     private MQTTMessageReceiver  messageIntentReceiver;
     
@@ -60,24 +61,29 @@ public class Dashboard extends Activity {
 		messageView = (TextView) findViewById(R.id.message);
 		scroller = (ScrollView) findViewById(R.id.scrollView1);
 		
-        statusUpdateIntentReceiver = new StatusUpdateReceiver();
-        IntentFilter intentSFilter = new IntentFilter(MQTTService.MQTT_STATUS_INTENT);
-        registerReceiver(statusUpdateIntentReceiver, intentSFilter);
-        
-        messageIntentReceiver = new MQTTMessageReceiver();
-        IntentFilter intentCFilter = new IntentFilter(MQTTService.MQTT_MSG_RECEIVED_INTENT);
-        registerReceiver(messageIntentReceiver, intentCFilter);
         
         
-		 //Bind to the Service
+        //Start the Service
+		Intent svc = new Intent(Dashboard.this, MQTTService.class);
+        startService(svc); 
+        
+        //Bind to the Service
 		 Intent intent = new Intent(this, MQTTService.class);
 	     bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 	     
-        if(MQTTService.SERVICE_STAT==false)	//only if the service has been shutdown..
+	        //Register the Broadcast Receivers
+	     	statusUpdateIntentReceiver = new StatusUpdateReceiver();
+	        IntentFilter intentSFilter = new IntentFilter(MQTTService.MQTT_STATUS_INTENT);
+	        registerReceiver(statusUpdateIntentReceiver, intentSFilter);
+	        
+	        messageIntentReceiver = new MQTTMessageReceiver();
+	        IntentFilter intentCFilter = new IntentFilter(MQTTService.MQTT_MSG_RECEIVED_INTENT);
+	        registerReceiver(messageIntentReceiver, intentCFilter);
+	     
+	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
+	        
+	     /* if(MQTTService.SERVICE_STAT==false)	//only if the service has been shutdown..
 		{
-	        //Start the Service
-			Intent svc = new Intent(Dashboard.this, MQTTService.class);
-	        startService(svc);
 	        	        
 		     
 			//Following stuff only for Logging in for the First Time
@@ -85,14 +91,39 @@ public class Dashboard extends Activity {
 	        password = getIntent().getStringExtra("password");
 	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
 	        
-	        processLogin();
+	       processLogin(); 
 
-		}
+		} */
+	     pd = ProgressDialog.show(this, "Connecting", "Please Wait..", true, false);
+	     
+	     new Thread() {
+		        public void run() {
+		        	while(!serverConnected){
+			        	try {
+							Thread.sleep(100);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+		        	}
+		        	handler.sendEmptyMessage(0);
+		        	
+		        } 
+		 }.start();
 	     
 		Log.d("Debug","Exiting onCreate");
     }
     
-    public void processLogin(){
+    private Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+                pd.dismiss();
+                Toast.makeText(getBaseContext(), "Connection Established", Toast.LENGTH_SHORT).show();
+                
+        }
+};
+    
+  /*  public void processLogin(){
     	
     	//wait till service is connected
     	new Thread() {
@@ -121,7 +152,7 @@ public class Dashboard extends Activity {
 	                },
 	                0); 
 	        }
-	        }.start();
+	        }.start(); 
 	        
 	        pd = ProgressDialog.show(this, "Registering", "Please Wait..", true, false);
 	        pd.setOnKeyListener(new DialogInterface.OnKeyListener() {
@@ -152,7 +183,7 @@ public class Dashboard extends Activity {
 	        	}
 	        }.start();
 	        
-    }
+    } 
     
     public void timerDelayRemoveDialog(long time, final ProgressDialog d){
         Handler handler = new Handler(); 
@@ -167,7 +198,7 @@ public class Dashboard extends Activity {
                 }
             }
         }, time); 
-    }
+    } 
     
     private Handler handler = new Handler() {
         @Override
@@ -185,7 +216,7 @@ public class Dashboard extends Activity {
 
                 }
         }
-};
+}; */
     
 /* @Override 
 	public void onResume(){
@@ -239,7 +270,7 @@ public class Dashboard extends Activity {
             String newStatus = notificationData.getString(MQTTService.MQTT_STATUS_MSG);
             Log.d("StatusReceiver", newStatus);
             if(newStatus.equals("Connected"))
-            	serverConnected = true;
+            	serverConnected = true; 
         }
     }
     public class MQTTMessageReceiver extends BroadcastReceiver
@@ -252,13 +283,14 @@ public class Dashboard extends Activity {
             String newData  = notificationData.getString(MQTTService.MQTT_MSG_RECEIVED_MSG);
             Log.d("NotificationReceiver", newTopic+" "+newData);
             
-            if(newTopic.equals(phone_id))	//Handle Response from MQTT Server
+            if(newTopic.equals(phone_id))	//Handle Response from MQTT Server with Topic name as UNIQUE_ANDROID_ID
             {
-            	if(newData.equals("REGISTER_SUCCESS"))
-            		registerResponse=1;
-            	else if(newData.equals("REGISTER_FAILURE"))
-            		registerResponse=2;
+            		if(newData.startsWith("TOPICS")){
+            			listOfTopics = newData.substring(7);
+            			topicsUpdated = true;
+            		}
             }
+         
             
             else {
             messageView.append("\nTopic: " + newTopic + "\nMessage: " + newData +"\n\n");
@@ -266,7 +298,8 @@ public class Dashboard extends Activity {
 				   public void run() {
 				        scroller.scrollTo(messageView.getMeasuredWidth(), messageView.getMeasuredHeight());
 				    }
-				}); }
+				}); 
+    		}
         }
     }
     
@@ -284,15 +317,41 @@ public class Dashboard extends Activity {
     
 	                    switch(id)
 	                    {
-	                    case 1: mqttService.publishToTopic("nittrichy", "hello world");
+	                    case 1: mqttService.publishToTopic("atkal", "Demo message published from the android application");
 	                    		break;
-	                    case 2: mqttService.subscribeToTopic("atkal");
+	                    case 2: 
+	                    	
+	                    		mqttService.publishToTopic("TOPICS", phone_id+"#"+"REQUEST");	//get the list of topics
+	                    		
+	                    		new Thread() {
+	                    			public void run() {
+	                    				while(!topicsUpdated){
+	                    					try {
+												Thread.sleep(100);
+											} catch (InterruptedException e) {
+												// TODO Auto-generated catch block
+												e.printStackTrace();
+											}
+	                    				}
+	                    				topicsHandler.sendEmptyMessage(0);
+	                    			}
+	                    		}.start();
+	                    		
+	                    		//mqttService.subscribeToTopic("atkal");
 	                    		break;
 	                    case 3: mqttService.unsubscribeToTopic("atkal");
 	                    		break;
 	                    }
     }
 
+    private Handler topicsHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+                messageView.append("\n\nList of Topics:\n"+listOfTopics);
+                topicsUpdated = false;
+                
+        }
+};
     
     
     public void getPendingMessages() {
