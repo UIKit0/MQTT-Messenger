@@ -289,6 +289,7 @@ public class Dashboard extends Activity {
             			listOfTopics = newData.substring(7);
             			topicsUpdated = true;
             		}
+            		//handle other cases here
             }
          
             
