@@ -6,6 +6,7 @@ import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -16,10 +17,13 @@ import android.os.Message;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.Window;
+import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -318,12 +322,34 @@ public class Dashboard extends Activity {
     
 	                    switch(id)
 	                    {
-	                    case 1: mqttService.publishToTopic("atkal", "Demo message published from the android application");
+	                    case 1:
+	                    	LayoutInflater factory = LayoutInflater.from(this);
+	                        final View textEntryView = factory.inflate(R.layout.dialogpublish, null);
+	                        AlertDialog.Builder alert = new AlertDialog.Builder(this);           
+	                    	
+	                    	alert.setTitle("Publish Message");
+	                    	alert.setView(textEntryView);
+
+	                    	alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+	                    	public void onClick(DialogInterface dialog, int whichButton) {
+	                    		// Do something with value!
+	                    		 EditText topicText = (EditText) textEntryView.findViewById(R.id.editTopic);
+	                    		 EditText topicMessage = (EditText) textEntryView.findViewById(R.id.editMessage);
+	                    		mqttService.publishToTopic( topicText.getText().toString(), topicMessage.getText().toString());
+	                    	  
+	                    	  }
+	                    	});
+	                    	alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+	                    	  public void onClick(DialogInterface dialog, int whichButton) {
+	                    	    // Canceled.
+	                    	  }
+	                    	});
+	                    	alert.show();
+	                    	
 	                    		break;
 	                    case 2: 
 	                    	
-	                    		mqttService.publishToTopic("TOPICS", phone_id+"#"+"REQUEST");	//get the list of topics
-	                    		
+	                    		/*mqttService.publishToTopic("TOPICS", phone_id+"#"+"REQUEST");	//get the list of topics
 	                    		new Thread() {
 	                    			public void run() {
 	                    				while(!topicsUpdated){
@@ -336,11 +362,58 @@ public class Dashboard extends Activity {
 	                    				}
 	                    				topicsHandler.sendEmptyMessage(0);
 	                    			}
-	                    		}.start();
-	                    		
-	                    		//mqttService.subscribeToTopic("atkal");
+	                    		}.start(); */
+	                    	
+	                    	
+	                    		//get list of topics from server and display multiselect in dialog to sub..
+	                    	LayoutInflater factory1 = LayoutInflater.from(this);
+	                        final View textEntryView1 = factory1.inflate(R.layout.dialogsubscribe, null);
+	                        AlertDialog.Builder alert1 = new AlertDialog.Builder(this);           
+	                    	
+	                    	alert1.setTitle("Subscribe");
+	                    	alert1.setView(textEntryView1);
+
+	                    	alert1.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+	                    	public void onClick(DialogInterface dialog, int whichButton) {
+	                    		// Do something with value!
+	                    		 EditText topicText = (EditText) textEntryView1.findViewById(R.id.editTopic);
+	                    		mqttService.subscribeToTopic( topicText.getText().toString());
+	                    	  
+	                    	  }
+	                    	});
+	                    	alert1.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+	                    	  public void onClick(DialogInterface dialog, int whichButton) {
+	                    	    // Canceled.
+	                    	  }
+	                    	});
+	                    	alert1.show();
+	                    
 	                    		break;
-	                    case 3: mqttService.unsubscribeToTopic("atkal");
+	                    case 3: //get list of topics from server and display multiselect in dialog to unsub..
+	                    	
+	                    	LayoutInflater factory2 = LayoutInflater.from(this);
+	                        final View textEntryView2 = factory2.inflate(R.layout.dialogunsubscribe, null);
+	                        AlertDialog.Builder alert2 = new AlertDialog.Builder(this);           
+	                    	
+	                    	alert2.setTitle("Unsubscribe");
+	                    	alert2.setView(textEntryView2);
+
+	                    	alert2.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+	                    	public void onClick(DialogInterface dialog, int whichButton) {
+	                    		// Do something with value!
+	                    		 EditText topicText = (EditText) textEntryView2.findViewById(R.id.editTopic);
+	                    		mqttService.unsubscribeToTopic( topicText.getText().toString());
+	                    	  
+	                    	  }
+	                    	});
+	                    	alert2.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+	                    	  public void onClick(DialogInterface dialog, int whichButton) {
+	                    	    // Canceled.
+	                    	  }
+	                    	});
+	                    	alert2.show();
+	                    	
+	                    	
 	                    		break;
 	                    }
     }
