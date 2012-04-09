@@ -36,7 +36,7 @@ public class StartPage extends Activity {
 		{
 			//Info Dialog Builder
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder.setMessage("\nMQTT Messenger Application: Version 1.0\n");
+			builder.setMessage("\nAn Android Application for Realtime Messaging System using MQTT\n\nTeam Members:\n\nDinesh Babu K G\nJagadeesh M\nVasantharajan S");
 			alert = builder.create();
 			
 			  Bundle extras = getIntent().getExtras();

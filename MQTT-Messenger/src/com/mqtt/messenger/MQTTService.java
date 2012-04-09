@@ -85,7 +85,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     /************************************************************************/
 
 
-    private String          brokerHostName       = "honeybeez.in";		//Custom Server
+    private String          brokerHostName       = "test.mosquitto.org";			//Custom Server
     private String          initialTopicName     = "";					//The Phone_id which will be published from Dashboard Activity    
 
     // defaults - this sample uses very basic defaults for it's interactions
@@ -228,7 +228,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             {
                 if (connectToBroker())
                 {
-                    subscribeToTopic(initialTopicName);
+                    //subscribeToTopic(initialTopicName);
+                	subscribeToTopic(initialTopicName);
                 }
             }
             else
@@ -629,8 +630,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             // inform the user (for times when the Activity UI isn't running)
             //   that there is new data available
             
-            if(!topic.equals(initialTopicName))	//Check if the Topic is NOT a Server Response
-            	notifyUser("New data received", topic, messageBody);
+            /*if(!topic.equals(initialTopicName))	//Check if the Topic is NOT a Server Response
+            	notifyUser("New Message received", topic, messageBody);*/
         }
 
         // receiving this message will have kept the connection alive for us, so

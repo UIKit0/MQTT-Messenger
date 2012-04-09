@@ -30,10 +30,13 @@ import android.widget.Toast;
 
 import com.mqtt.messenger.MQTTService.LocalBinder;
 
+
 public class Dashboard extends Activity {
 
 	
 	private MQTTService mqttService;
+	
+	
 	private boolean mBound = false;
 	private boolean serverConnected = false;
 	private String phone_id;
@@ -59,14 +62,13 @@ public class Dashboard extends Activity {
 
 		//Info Dialog Builder
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setMessage("\nMQTT Messenger Application: Version 1.0\n");
+		builder.setMessage("\nAn Android Application for Realtime Messaging System using MQTT\n\nTeam Members:\n\nDinesh Babu K G\nJagadeesh M\nVasantharajan S");
 		alert = builder.create();
 		
 		messageView = (TextView) findViewById(R.id.message);
 		scroller = (ScrollView) findViewById(R.id.scrollView1);
 		
-        
-        
+       
         //Start the Service
 		Intent svc = new Intent(Dashboard.this, MQTTService.class);
         startService(svc); 
@@ -114,7 +116,10 @@ public class Dashboard extends Activity {
 		        	
 		        } 
 		 }.start();
-	     
+		 
+		 //Clear all the existing messages!
+		 messageView.setText("");
+		 
 		Log.d("Debug","Exiting onCreate");
     }
     
@@ -329,14 +334,18 @@ public class Dashboard extends Activity {
 	                    	
 	                    	alert.setTitle("Publish Message");
 	                    	alert.setView(textEntryView);
-
+	                    
+	                    	EditText topicText = (EditText) textEntryView.findViewById(R.id.editTopic);
+	                    	topicText.setText("mqtt");
+	                    	
 	                    	alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 	                    	public void onClick(DialogInterface dialog, int whichButton) {
 	                    		// Do something with value!
 	                    		 EditText topicText = (EditText) textEntryView.findViewById(R.id.editTopic);
 	                    		 EditText topicMessage = (EditText) textEntryView.findViewById(R.id.editMessage);
-	                    		mqttService.publishToTopic( topicText.getText().toString(), topicMessage.getText().toString());
-	                    	  
+	                    		 
+		                    	mqttService.publishToTopic(topicText.getText().toString(), topicMessage.getText().toString());
+		                    	
 	                    	  }
 	                    	});
 	                    	alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -372,12 +381,17 @@ public class Dashboard extends Activity {
 	                    	
 	                    	alert1.setTitle("Subscribe");
 	                    	alert1.setView(textEntryView1);
+	                    	
+	                    	topicText = (EditText) textEntryView1.findViewById(R.id.editTopic);
+	                    	topicText.setText("#");
 
 	                    	alert1.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 	                    	public void onClick(DialogInterface dialog, int whichButton) {
 	                    		// Do something with value!
 	                    		 EditText topicText = (EditText) textEntryView1.findViewById(R.id.editTopic);
-	                    		mqttService.subscribeToTopic( topicText.getText().toString());
+	                    		 
+	                    		 mqttService.subscribeToTopic( topicText.getText().toString());
+	                    		
 	                    	  
 	                    	  }
 	                    	});
@@ -397,12 +411,17 @@ public class Dashboard extends Activity {
 	                    	
 	                    	alert2.setTitle("Unsubscribe");
 	                    	alert2.setView(textEntryView2);
+	                    	
+	                    	topicText = (EditText) textEntryView2.findViewById(R.id.editTopic);
+	                    	topicText.setText("#");
 
 	                    	alert2.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 	                    	public void onClick(DialogInterface dialog, int whichButton) {
 	                    		// Do something with value!
 	                    		 EditText topicText = (EditText) textEntryView2.findViewById(R.id.editTopic);
-	                    		mqttService.unsubscribeToTopic( topicText.getText().toString());
+	                    		 
+	                    		 mqttService.unsubscribeToTopic( topicText.getText().toString());
+	                    		
 	                    	  
 	                    	  }
 	                    	});
@@ -464,4 +483,5 @@ public class Dashboard extends Activity {
         }
         return true;
     }
+    
 }      
