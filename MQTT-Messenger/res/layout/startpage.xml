@@ -50,5 +50,14 @@
         android:textSize="8pt"
         android:layout_gravity="center_horizontal"
         android:onClick="processLogin" />
+
+    <Button
+        android:id="@+id/Button01"
+        android:layout_width="104dp"
+        android:layout_height="wrap_content"
+        android:text="Register"
+        android:textSize="8pt"
+        android:layout_gravity="center_horizontal" 
+        android:onClick="processLogin" />
     
 </LinearLayout>

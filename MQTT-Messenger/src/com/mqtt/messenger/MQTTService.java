@@ -95,6 +95,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     private MqttPersistence usePersistence       = null;
     private boolean         cleanStart           = false;
     private int[]           qualitiesOfService   = { 0 } ;
+    
+    
 
     //  how often should the app ping the server to keep the connection alive?
     private short           keepAliveSeconds     = 20 * 60; 
@@ -262,6 +264,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         }
     }
 
+  
     @Override
     public void onDestroy()
     {
@@ -630,8 +633,10 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             // inform the user (for times when the Activity UI isn't running)
             //   that there is new data available
             
-            /*if(!topic.equals(initialTopicName))	//Check if the Topic is NOT a Server Response
-            	notifyUser("New Message received", topic, messageBody);*/
+            /*if(!topic.equals(initialTopicName))	//Check if the Topic is NOT a Server Response */
+            
+            if(Dashboard.active==false)
+            	notifyUser("New Message Received", topic, messageBody);
         }
 
         // receiving this message will have kept the connection alive for us, so

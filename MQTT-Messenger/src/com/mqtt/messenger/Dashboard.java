@@ -35,15 +35,16 @@ public class Dashboard extends Activity {
 
 	
 	private MQTTService mqttService;
-	
+	static boolean active = false;
 	
 	private boolean mBound = false;
 	private boolean serverConnected = false;
-	private String phone_id;
-	/*private String username, password;
-	private int registerResponse = 0; */
-	private String listOfTopics = "";
-	private boolean topicsUpdated = false;
+	
+	private static String username, password;	
+	private static int registerResponse = 0;
+	private static int loginResponse = 0;
+	private static String phone_id;
+	
 	private StatusUpdateReceiver statusUpdateIntentReceiver;
     private MQTTMessageReceiver  messageIntentReceiver;
     
@@ -69,9 +70,26 @@ public class Dashboard extends Activity {
 		scroller = (ScrollView) findViewById(R.id.scrollView1);
 		
        
-        //Start the Service
-		Intent svc = new Intent(Dashboard.this, MQTTService.class);
-        startService(svc); 
+        if(MQTTService.SERVICE_STAT==false) {
+        	
+			//Start the Service
+			Intent svc = new Intent(Dashboard.this, MQTTService.class);
+	        startService(svc); 
+	        username = getIntent().getStringExtra("username");
+	        password = getIntent().getStringExtra("password");
+	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
+	        
+	        String action = getIntent().getStringExtra("action");
+	        if(action.equals("1"))
+	        	processLogin();
+	        else
+	        	processRegister();
+        }
+        
+        else
+        {
+        	//restart the dashboard
+        }
         
         //Bind to the Service
 		 Intent intent = new Intent(this, MQTTService.class);
@@ -87,153 +105,162 @@ public class Dashboard extends Activity {
 	        registerReceiver(messageIntentReceiver, intentCFilter);
 	     
 	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
-	        
-	     /* if(MQTTService.SERVICE_STAT==false)	//only if the service has been shutdown..
-		{
-	        	        
-		     
-			//Following stuff only for Logging in for the First Time
-	        username = getIntent().getStringExtra("username");
-	        password = getIntent().getStringExtra("password");
-	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
-	        
-	       processLogin(); 
-
-		} */
-	     pd = ProgressDialog.show(this, "Connecting", "Please Wait..", true, false);
-	     
-	     new Thread() {
-		        public void run() {
-		        	while(!serverConnected){
-			        	try {
-							Thread.sleep(100);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-		        	}
-		        	handler.sendEmptyMessage(0);
-		        	
-		        } 
-		 }.start();
+	
 		 
 		 //Clear all the existing messages!
 		 messageView.setText("");
 		 
+		 
 		Log.d("Debug","Exiting onCreate");
     }
     
-    private Handler handler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-                pd.dismiss();
-                Toast.makeText(getBaseContext(), "Connection Established", Toast.LENGTH_SHORT).show();
-                
+
+public void processRegister(){
+	
+	//wait till service is connected
+	new Thread() {
+        public void run() {
+        	while(!serverConnected){
+	        	try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+        	}
+        	
+        //publish register message
+        bindService(new Intent(Dashboard.this, MQTTService.class),
+                new ServiceConnection() {
+                    @Override
+                    public void onServiceConnected(ComponentName className, final IBinder service)
+                    {
+                        MQTTService mqttService = ((LocalBinder)service).getService();
+                        mqttService.publishToTopic("REGISTER", phone_id+"#"+username+"#"+password);
+                        unbindService(this);
+                    }
+                    @Override
+                    public void onServiceDisconnected(ComponentName name) {}
+                },
+                0); 
         }
-};
-    
-  /*  public void processLogin(){
-    	
-    	//wait till service is connected
-    	new Thread() {
-	        public void run() {
-	        	while(!serverConnected){
-		        	try {
+        }.start(); 
+        
+        pd = ProgressDialog.show(this, "Registering", "Please Wait..", true, false);
+        
+        new Thread() {
+        	public void run(){
+        		while(registerResponse==0){
+        			try {
 						Thread.sleep(100);
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-	        	}
-	        	
-	        //publish register message
-	        bindService(new Intent(Dashboard.this, MQTTService.class),
-	                new ServiceConnection() {
-	                    @Override
-	                    public void onServiceConnected(ComponentName className, final IBinder service)
-	                    {
-	                        MQTTService mqttService = ((LocalBinder)service).getService();
-	                        mqttService.publishToTopic("REGISTER", phone_id+"#"+username+"#"+password);
-	                        unbindService(this);
-	                    }
-	                    @Override
-	                    public void onServiceDisconnected(ComponentName name) {}
-	                },
-	                0); 
-	        }
-	        }.start(); 
-	        
-	        pd = ProgressDialog.show(this, "Registering", "Please Wait..", true, false);
-	        pd.setOnKeyListener(new DialogInterface.OnKeyListener() {
-	            @Override
-	            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-	                if (keyCode == KeyEvent.KEYCODE_SEARCH && event.getRepeatCount() == 0) {
-	                    return true; // Pretend we processed it
-	                }
-	                return false; // Any other keys are still processed as normal
-	            }
-	        });
-	        timerDelayRemoveDialog(10000,pd);	//timeout after 10 seconds
-	        //wait for response and proceed accordingly
-	        new Thread() {
-	        	public void run(){
-	        		while(registerResponse==0){
-	        			try {
-							Thread.sleep(100);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-	        		}
-	        		if(registerResponse==1)
-	        			handler.sendMessage(Message.obtain(handler, 1));
-	        		else if(registerResponse==2)
-	        			handler.sendMessage(Message.obtain(handler, 2));
-	        	}
-	        }.start();
-	        
-    } 
-    
-    public void timerDelayRemoveDialog(long time, final ProgressDialog d){
-        Handler handler = new Handler(); 
-        handler.postDelayed(new Runnable() {           
-            public void run() {
-            	if(d.isShowing())
-                {
-            		d.dismiss();
-            		Toast.makeText(getBaseContext(), "Connection Timed out! Try Again!", Toast.LENGTH_SHORT).show();
-            		stopservice();
-            		finish();
-                }
+        		}
+        		if(registerResponse==1)
+        			handlerReg.sendMessage(Message.obtain(handlerReg, 1));
+        		else if(registerResponse==2)
+        			handlerReg.sendMessage(Message.obtain(handlerReg, 2));
+        	}
+        }.start();
+        
+} 
+
+
+private Handler handlerReg = new Handler() {
+    @Override
+    public void handleMessage(Message msg) {
+            pd.dismiss();
+            if(msg.what==1)
+            {
+            	Toast.makeText(getBaseContext(), "Registered & logged in successfully!", Toast.LENGTH_SHORT).show();
             }
-        }, time); 
-    } 
-    
-    private Handler handler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-                pd.dismiss();
-                if(msg.what==1)
-                {
-                	Toast.makeText(getBaseContext(), "Login Success!", Toast.LENGTH_SHORT).show();
-                }
-                else if(msg.what==2)
-                {
-                	Toast.makeText(getBaseContext(), "Login Failed! Try Again!", Toast.LENGTH_SHORT).show();
-                	stopservice();
-                	finish();
-
-                }
+            else if(msg.what==2)
+            {
+            	Toast.makeText(getBaseContext(), "Register Failed, Try Again later!", Toast.LENGTH_SHORT).show();
+            	stopservice();
+            	finish();
+            }
+    }
+};
+  
+public void processLogin(){
+	
+	//wait till service is connected
+	new Thread() {
+        public void run() {
+        	while(!serverConnected){
+	        	try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+        	}
+        	
+        //publish register message
+        bindService(new Intent(Dashboard.this, MQTTService.class),
+                new ServiceConnection() {
+                    @Override
+                    public void onServiceConnected(ComponentName className, final IBinder service)
+                    {
+                        MQTTService mqttService = ((LocalBinder)service).getService();
+                        mqttService.publishToTopic("LOGIN", phone_id+"#"+username+"#"+password);
+                        unbindService(this);
+                    }
+                    @Override
+                    public void onServiceDisconnected(ComponentName name) {}
+                },
+                0); 
         }
-}; */
-    
-/* @Override 
-	public void onResume(){
-		super.onResume();
-		if(loggedIn==false)
-			processLogin();
-	}	 */
+        }.start(); 
+        
+        pd = ProgressDialog.show(this, "Logging in", "Please Wait..", true, false);
+        
+        new Thread() {
+        	public void run(){
+        		while(loginResponse==0){
+        			try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+        		}
+        		if(loginResponse==1)
+        			handlerLog.sendMessage(Message.obtain(handlerLog, 1));
+        		else if(loginResponse==2)
+        			handlerLog.sendMessage(Message.obtain(handlerLog, 2));
+        	}
+        }.start();
+        
+} 
 
+
+private Handler handlerLog = new Handler() {
+    @Override
+    public void handleMessage(Message msg) {
+            pd.dismiss();
+            if(msg.what==1)
+            {
+            	Toast.makeText(getBaseContext(), "Logged in successfully!", Toast.LENGTH_SHORT).show();
+            }
+            else if(msg.what==2)
+            {
+            	Toast.makeText(getBaseContext(), "Login Incorrect. Try Again!", Toast.LENGTH_SHORT).show();
+            	stopservice();
+            	finish();
+            }
+    }
+};
+
+	@Override
+	public void onStart()
+	{
+		super.onStart();
+		active = true;
+	}
     @Override  
     public void onStop(){
     	super.onStop();
@@ -241,6 +268,7 @@ public class Dashboard extends Activity {
              unbindService(mConnection);
              mBound = false;
          }
+    	 active = false;
     }
         
     @Override
@@ -294,16 +322,26 @@ public class Dashboard extends Activity {
             
             if(newTopic.equals(phone_id))	//Handle Response from MQTT Server with Topic name as UNIQUE_ANDROID_ID
             {
-            		if(newData.startsWith("TOPICS")){
-            			listOfTopics = newData.substring(7);
-            			topicsUpdated = true;
-            		}
-            		//handle other cases here
+            	if(newData.equals("REG_SUCCESS")) 
+            		registerResponse = 1;
+            	else if(newData.equals("REG_FAILURE")) 
+            		registerResponse = 2;
+            	else if(newData.equals("LOGIN_SUCCESS")) 
+            		loginResponse = 1;
+            	else if(newData.equals("LOGIN_FAILURE")) 
+            		loginResponse = 2;
+            	
             }
-         
-            
             else {
-            messageView.append("\nTopic: " + newTopic + "\nMessage: " + newData +"\n\n");
+            //change newTopic to Original Topic name..
+            	String origTopic = null;
+            	try {
+            if(newTopic.startsWith("JynxOutgoing"))
+            	origTopic = newTopic.substring(13);
+            else
+            	origTopic = newTopic;
+            	} catch(Exception e){ }
+            messageView.append("\nTopic: " + origTopic + "\nMessage: " + newData +"\n\n");
     		scroller.post(new Runnable() {
 				   public void run() {
 				        scroller.scrollTo(messageView.getMeasuredWidth(), messageView.getMeasuredHeight());
@@ -335,8 +373,6 @@ public class Dashboard extends Activity {
 	                    	alert.setTitle("Publish Message");
 	                    	alert.setView(textEntryView);
 	                    
-	                    	EditText topicText = (EditText) textEntryView.findViewById(R.id.editTopic);
-	                    	topicText.setText("mqtt");
 	                    	
 	                    	alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 	                    	public void onClick(DialogInterface dialog, int whichButton) {
@@ -344,7 +380,7 @@ public class Dashboard extends Activity {
 	                    		 EditText topicText = (EditText) textEntryView.findViewById(R.id.editTopic);
 	                    		 EditText topicMessage = (EditText) textEntryView.findViewById(R.id.editMessage);
 	                    		 
-		                    	mqttService.publishToTopic(topicText.getText().toString(), topicMessage.getText().toString());
+		                    	mqttService.publishToTopic( "JynxIncoming/" + topicText.getText().toString(), username+"#"+password+"#"+topicMessage.getText().toString());
 		                    	
 	                    	  }
 	                    	});
@@ -356,41 +392,23 @@ public class Dashboard extends Activity {
 	                    	alert.show();
 	                    	
 	                    		break;
-	                    case 2: 
+	                    case 2: 	                    
 	                    	
-	                    		/*mqttService.publishToTopic("TOPICS", phone_id+"#"+"REQUEST");	//get the list of topics
-	                    		new Thread() {
-	                    			public void run() {
-	                    				while(!topicsUpdated){
-	                    					try {
-												Thread.sleep(100);
-											} catch (InterruptedException e) {
-												// TODO Auto-generated catch block
-												e.printStackTrace();
-											}
-	                    				}
-	                    				topicsHandler.sendEmptyMessage(0);
-	                    			}
-	                    		}.start(); */
-	                    	
-	                    	
-	                    		//get list of topics from server and display multiselect in dialog to sub..
 	                    	LayoutInflater factory1 = LayoutInflater.from(this);
 	                        final View textEntryView1 = factory1.inflate(R.layout.dialogsubscribe, null);
 	                        AlertDialog.Builder alert1 = new AlertDialog.Builder(this);           
-	                    	
 	                    	alert1.setTitle("Subscribe");
 	                    	alert1.setView(textEntryView1);
 	                    	
-	                    	topicText = (EditText) textEntryView1.findViewById(R.id.editTopic);
-	                    	topicText.setText("#");
-
 	                    	alert1.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 	                    	public void onClick(DialogInterface dialog, int whichButton) {
 	                    		// Do something with value!
 	                    		 EditText topicText = (EditText) textEntryView1.findViewById(R.id.editTopic);
 	                    		 
-	                    		 mqttService.subscribeToTopic( topicText.getText().toString());
+	                    		 if(topicText.getText().toString().isEmpty()==true)
+	                    			 mqttService.subscribeToTopic( "#" );
+	                    		 else
+	                    			 mqttService.subscribeToTopic( "JynxOutgoing/" + topicText.getText().toString());
 	                    		
 	                    	  
 	                    	  }
@@ -400,7 +418,7 @@ public class Dashboard extends Activity {
 	                    	    // Canceled.
 	                    	  }
 	                    	});
-	                    	alert1.show();
+	                    	alert1.show(); 
 	                    
 	                    		break;
 	                    case 3: //get list of topics from server and display multiselect in dialog to unsub..
@@ -412,15 +430,16 @@ public class Dashboard extends Activity {
 	                    	alert2.setTitle("Unsubscribe");
 	                    	alert2.setView(textEntryView2);
 	                    	
-	                    	topicText = (EditText) textEntryView2.findViewById(R.id.editTopic);
-	                    	topicText.setText("#");
 
 	                    	alert2.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 	                    	public void onClick(DialogInterface dialog, int whichButton) {
 	                    		// Do something with value!
 	                    		 EditText topicText = (EditText) textEntryView2.findViewById(R.id.editTopic);
 	                    		 
-	                    		 mqttService.unsubscribeToTopic( topicText.getText().toString());
+	                    		 if(topicText.getText().toString().isEmpty()==true)
+	                    			 mqttService.unsubscribeToTopic( "#" );
+	                    		 else
+	                    			 mqttService.unsubscribeToTopic( "JynxOutgoing/" +topicText.getText().toString());
 	                    		
 	                    	  
 	                    	  }
@@ -437,20 +456,11 @@ public class Dashboard extends Activity {
 	                    }
     }
 
-    private Handler topicsHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-                messageView.append("\n\nList of Topics:\n"+listOfTopics);
-                topicsUpdated = false;
-                
-        }
-};
-    
     
     public void getPendingMessages() {
-	                    mqttService.rebroadcastReceivedMessages();
-	                }
-    
+        mqttService.rebroadcastReceivedMessages();
+    }
+
     
     
     //Menu Functions 

@@ -1,7 +1,6 @@
 package com.mqtt.messenger;
 
 import android.app.Activity;
-
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
@@ -10,6 +9,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -75,10 +75,14 @@ public class StartPage extends Activity {
 		username = uname.getText().toString();
 		pwd = (EditText) findViewById(R.id.editText2);
 		password = pwd.getText().toString();
-		
 		Intent i = new Intent(StartPage.this, Dashboard.class);
 		i.putExtra("username", username);
 		i.putExtra("password", password);
+		if( ((Button)v).getText().equals("Login"))
+			i.putExtra("action","1");
+		else if( ((Button)v).getText().equals("Register"))
+			i.putExtra("action","2");
+		
 		startActivity(i);
 		finish();
 	}
