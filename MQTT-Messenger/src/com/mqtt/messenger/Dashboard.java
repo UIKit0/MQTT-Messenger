@@ -1,5 +1,8 @@
 package com.mqtt.messenger;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -10,6 +13,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -39,6 +43,7 @@ public class Dashboard extends Activity {
 	private MQTTService mqttService;
 	static boolean active = false;
 	public static String username, password;
+	public String FILENAME = "mqttMessages";
 	
 	private boolean mBound = false;
 	private boolean serverConnected = false;
@@ -80,29 +85,36 @@ public class Dashboard extends Activity {
 		scroller = (ScrollView) findViewById(R.id.scrollView1);
 	
        
-			//Start the Service
-			Intent svc = new Intent(Dashboard.this, MQTTService.class);
-        
-        	if(startService(svc)==null) 
+			SharedPreferences myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
+        	username = myPrefs.getString("username", "nothing");
+        	password = myPrefs.getString("password", "nothing");
+		
+        	if(username.equals("nothing")) 
         	{
-	        username = getIntent().getStringExtra("username");
-	        password = getIntent().getStringExtra("password");
-	        MQTTService.username = username;
-	        MQTTService.password = password;
-	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
-	        
-	        String action = getIntent().getStringExtra("action");
-	        if(action.equals("1"))
-	        	processLogin();
-	        else
-	        	processRegister();
+	        	//Start the Service        		
+	        	Intent svc = new Intent(Dashboard.this, MQTTService.class);
+	        	startService(svc);
+		        username = getIntent().getStringExtra("username");
+		        password = getIntent().getStringExtra("password");
+		        
+		        myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
+		        SharedPreferences.Editor prefsEditor = myPrefs.edit();
+		        prefsEditor.putString("username", username);
+		        prefsEditor.putString("password", password);
+		        prefsEditor.commit();
+		        
+		        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
+		        
+		        String action = getIntent().getStringExtra("action");
+		        if(action.equals("1"))
+		        	processLogin();
+		        else
+		        	processRegister();
         }
         
         else
         {
-        	//restart the dashboard
-        	username = MQTTService.username;
-    		password = MQTTService.password;
+        	//restart dashboard
         }
         
         //Bind to the Service
@@ -121,8 +133,16 @@ public class Dashboard extends Activity {
 	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
 	
 		 
-		 //Clear all the existing messages!
-		 messageView.setText("");
+		    //fetch old messages
+	        byte[] buffer = new byte[2048];
+	        try {
+		        	FileInputStream fis = openFileInput(FILENAME);
+		        	int length;
+			        while ((length = fis.read(buffer)) != -1) {
+			            messageView.setText(new String(buffer));
+		        }
+	        	fis.close();
+	        	} catch(Exception e) {}
 		 
 		 
 		Log.d("Debug","Exiting onCreate");
@@ -295,6 +315,19 @@ private Handler handlerLog = new Handler() {
     	super.onDestroy();
         unregisterReceiver(statusUpdateIntentReceiver);
         unregisterReceiver(messageIntentReceiver);
+        
+        SharedPreferences myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor prefsEditor = myPrefs.edit();
+        prefsEditor.putString("username", "nothing");
+        prefsEditor.putString("password", "nothing");
+        prefsEditor.commit();
+        
+    	try {
+    	FileOutputStream fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
+    	fos.write(messageView.getText().toString().getBytes());
+    	fos.close();
+    	} catch(Exception e) {}
+    	
         Log.d("Debug","Exiting onDestroy");
     } 
     
@@ -586,6 +619,11 @@ private Handler handlerLog = new Handler() {
         						break;
        
         case R.id.dashitem4:	stopservice();
+						    	try {
+						    	FileOutputStream fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
+						    	fos.write("".getBytes());
+						    	fos.close();
+						    	} catch(Exception e) {}
         						finish();
 								break;
 								

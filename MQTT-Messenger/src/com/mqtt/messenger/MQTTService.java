@@ -1,7 +1,8 @@
 package com.mqtt.messenger;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
-
 import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -89,8 +90,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     private String          brokerHostName       = "test.mosquitto.org";			//Custom Server
     private String          initialTopicName     = "";					//The Phone_id which will be published from Dashboard Activity    
 
-	public static String username, password;	
     public static ArrayList<String> listOfTopicsSubscribed = new ArrayList<String>();
+	public String FILENAME = "mqttMessages";
 	
     // defaults - this sample uses very basic defaults for it's interactions
     //   with message brokers
@@ -646,6 +647,17 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             //   received message so the app UI can be updated with the new data
             broadcastReceivedMessage(topic, messageBody);
 
+            //Write to Message file
+            byte[] buffer = new byte[2048];
+            try {
+	            FileInputStream fis = openFileInput(FILENAME);
+		        int length = fis.read(buffer);	
+	            FileOutputStream fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
+	            String messageAndTopic = "\nTopic: " + topic + "\nMessage: " + messageBody +"\n\n";
+	        	fos.write(messageAndTopic.getBytes(),length, messageAndTopic.length());
+	        	fis.close();
+	        	fos.close();
+            } catch(Exception e) {}
             //
             // inform the user (for times when the Activity UI isn't running)
             //   that there is new data available
