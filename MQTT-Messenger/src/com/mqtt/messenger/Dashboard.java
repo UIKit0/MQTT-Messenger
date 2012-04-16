@@ -46,11 +46,6 @@ public class Dashboard extends Activity {
 	public String FILENAME = "mqttMessages";
 	
 	private boolean mBound = false;
-	private boolean serverConnected = false;
-	
-	private static int registerResponse = 0;
-	private static int loginResponse = 0;
-	private static String phone_id;
 	
 	private StatusUpdateReceiver statusUpdateIntentReceiver;
     private MQTTMessageReceiver  messageIntentReceiver;
@@ -69,7 +64,8 @@ public class Dashboard extends Activity {
 	
     
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) 
+    {
     	
         //basic stuff
     	super.onCreate(savedInstanceState);
@@ -85,211 +81,42 @@ public class Dashboard extends Activity {
 		scroller = (ScrollView) findViewById(R.id.scrollView1);
 	
        
-			SharedPreferences myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
-        	username = myPrefs.getString("username", "nothing");
-        	password = myPrefs.getString("password", "nothing");
+		SharedPreferences myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
+    	username = myPrefs.getString("username", "nothing");
+    	password = myPrefs.getString("password", "nothing");
 		
-        	if(username.equals("nothing")) 
-        	{
-	        	//Start the Service        		
-	        	Intent svc = new Intent(Dashboard.this, MQTTService.class);
-	        	startService(svc);
-		        username = getIntent().getStringExtra("username");
-		        password = getIntent().getStringExtra("password");
-		        
-		        myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
-		        SharedPreferences.Editor prefsEditor = myPrefs.edit();
-		        prefsEditor.putString("username", username);
-		        prefsEditor.putString("password", password);
-		        prefsEditor.commit();
-		        
-		        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
-		        
-		        String action = getIntent().getStringExtra("action");
-		        if(action.equals("1"))
-		        	processLogin();
-		        else
-		        	processRegister();
-        }
-        
-        else
-        {
-        	//restart dashboard
-        }
-        
+    	//Start the Service        		
+    	Intent svc = new Intent(Dashboard.this, MQTTService.class);
+    	startService(svc);		        
+
         //Bind to the Service
 		 Intent intent = new Intent(this, MQTTService.class);
 	     bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 	     
-	        //Register the Broadcast Receivers
-	     	statusUpdateIntentReceiver = new StatusUpdateReceiver();
-	        IntentFilter intentSFilter = new IntentFilter(MQTTService.MQTT_STATUS_INTENT);
-	        registerReceiver(statusUpdateIntentReceiver, intentSFilter);
-	        
-	        messageIntentReceiver = new MQTTMessageReceiver();
-	        IntentFilter intentCFilter = new IntentFilter(MQTTService.MQTT_MSG_RECEIVED_INTENT);
-	        registerReceiver(messageIntentReceiver, intentCFilter);
-	     
-	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
-	
+        //Register the Broadcast Receivers
+     	statusUpdateIntentReceiver = new StatusUpdateReceiver();
+        IntentFilter intentSFilter = new IntentFilter(MQTTService.MQTT_STATUS_INTENT);
+        registerReceiver(statusUpdateIntentReceiver, intentSFilter);
+        
+        messageIntentReceiver = new MQTTMessageReceiver();
+        IntentFilter intentCFilter = new IntentFilter(MQTTService.MQTT_MSG_RECEIVED_INTENT);
+        registerReceiver(messageIntentReceiver, intentCFilter);
 		 
-		    //fetch old messages
-	        byte[] buffer = new byte[2048];
-	        try {
-		        	FileInputStream fis = openFileInput(FILENAME);
-		        	int length;
-			        while ((length = fis.read(buffer)) != -1) {
-			            messageView.setText(new String(buffer));
-		        }
-	        	fis.close();
-	        	} catch(Exception e) {}
-		 
-		 
+	    //fetch old messages
+        byte[] buffer = new byte[2048];
+        try {
+	        	FileInputStream fis = openFileInput(FILENAME);
+	        	int length;
+		        while ((length = fis.read(buffer)) != -1) {
+		            messageView.setText(new String(buffer));
+	        }
+        	fis.close();
+        	} catch(Exception e) {}
+
 		Log.d("Debug","Exiting onCreate");
     }
     
 
-public void processRegister(){
-	
-	//wait till service is connected
-	new Thread() {
-        public void run() {
-        	while(!serverConnected){
-	        	try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-        	}
-        	
-        //publish register message
-        bindService(new Intent(Dashboard.this, MQTTService.class),
-                new ServiceConnection() {
-                    @Override
-                    public void onServiceConnected(ComponentName className, final IBinder service)
-                    {
-                        MQTTService mqttService = ((LocalBinder)service).getService();
-                        mqttService.publishToTopic("REGISTER", phone_id+"#"+username+"#"+password);
-                        unbindService(this);
-                    }
-                    @Override
-                    public void onServiceDisconnected(ComponentName name) {}
-                },
-                0); 
-        }
-        }.start(); 
-        
-        pd = ProgressDialog.show(this, "Registering", "Please Wait..", true, false);
-        
-        new Thread() {
-        	public void run(){
-        		while(registerResponse==0){
-        			try {
-						Thread.sleep(100);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-        		}
-        		if(registerResponse==1)
-        			handlerReg.sendMessage(Message.obtain(handlerReg, 1));
-        		else if(registerResponse==2)
-        			handlerReg.sendMessage(Message.obtain(handlerReg, 2));
-        	}
-        }.start();
-        
-} 
-
-
-private Handler handlerReg = new Handler() {
-    @Override
-    public void handleMessage(Message msg) {
-            pd.dismiss();
-            if(msg.what==1)
-            {
-            	Toast.makeText(getBaseContext(), "Registered & logged in successfully!", Toast.LENGTH_SHORT).show();
-            }
-            else if(msg.what==2)
-            {
-            	Toast.makeText(getBaseContext(), "Register Failed, Try Again later!", Toast.LENGTH_SHORT).show();
-            	stopservice();
-            	finish();
-            }
-    }
-};
-  
-public void processLogin(){
-	
-	//wait till service is connected
-	new Thread() {
-        public void run() {
-        	while(!serverConnected){
-	        	try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-        	}
-        	
-        //publish register message
-        bindService(new Intent(Dashboard.this, MQTTService.class),
-                new ServiceConnection() {
-                    @Override
-                    public void onServiceConnected(ComponentName className, final IBinder service)
-                    {
-                        MQTTService mqttService = ((LocalBinder)service).getService();
-                        mqttService.publishToTopic("LOGIN", phone_id+"#"+username+"#"+password);
-                        unbindService(this);
-                    }
-                    @Override
-                    public void onServiceDisconnected(ComponentName name) {}
-                },
-                0); 
-        }
-        }.start(); 
-        
-        pd = ProgressDialog.show(this, "Logging in", "Please Wait..", true, false);
-        
-        new Thread() {
-        	public void run(){
-        		while(loginResponse==0){
-        			try {
-						Thread.sleep(100);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-        		}
-        		if(loginResponse==1)
-        			handlerLog.sendMessage(Message.obtain(handlerLog, 1));
-        		else if(loginResponse==2)
-        			handlerLog.sendMessage(Message.obtain(handlerLog, 2));
-        	}
-        }.start();
-        
-} 
-
-
-private Handler handlerLog = new Handler() {
-    @Override
-    public void handleMessage(Message msg) {
-            pd.dismiss();
-            if(msg.what==1)
-            {
-            	Toast.makeText(getBaseContext(), "Logged in successfully!", Toast.LENGTH_SHORT).show();
-        		mqttService.subscribeToTopic(username);
-        		getListOfTopics();
-            }
-            else if(msg.what==2)
-            {
-            	Toast.makeText(getBaseContext(), "Login Incorrect. Try Again!", Toast.LENGTH_SHORT).show();
-            	stopservice();
-            	finish();
-            }
-    }
-};
 
 	@Override
 	public void onStart()
@@ -355,8 +182,6 @@ private Handler handlerLog = new Handler() {
             Bundle notificationData = intent.getExtras();
             String newStatus = notificationData.getString(MQTTService.MQTT_STATUS_MSG);
             Log.d("StatusReceiver", newStatus);
-            if(newStatus.equals("Connected"))
-            	serverConnected = true; 
         }
     }
     public class MQTTMessageReceiver extends BroadcastReceiver
@@ -369,19 +194,7 @@ private Handler handlerLog = new Handler() {
             String newData  = notificationData.getString(MQTTService.MQTT_MSG_RECEIVED_MSG);
             Log.d("NotificationReceiver", newTopic+" "+newData);
             
-            if(newTopic.equals(phone_id))	//Handle Response from MQTT Server with Topic name as UNIQUE_ANDROID_ID
-            {
-            	if(newData.equals("REG_SUCCESS")) 
-            		registerResponse = 1;
-            	else if(newData.equals("REG_FAILURE")) 
-            		registerResponse = 2;
-            	else if(newData.equals("LOGIN_SUCCESS")) 
-            		loginResponse = 1;
-            	else if(newData.equals("LOGIN_FAILED")) 
-            		loginResponse = 2;
-            	
-            }
-            else if(newTopic.equals(username))
+            if(newTopic.equals(username))
             {
             	if(newData.startsWith("TOPICS"))
             	{
@@ -394,8 +207,8 @@ private Handler handlerLog = new Handler() {
             //change newTopic to Original Topic name..
             	String origTopic = null;
             	origTopic = newTopic;
-            messageView.append("\nTopic: " + origTopic + "\nMessage: " + newData +"\n\n");
-    		scroller.post(new Runnable() {
+            	messageView.append("\nTopic: " + origTopic + "\nMessage: " + newData +"\n\n");
+            	scroller.post(new Runnable() {
 				   public void run() {
 				        scroller.scrollTo(messageView.getMeasuredWidth(), messageView.getMeasuredHeight());
 				    }
@@ -423,7 +236,6 @@ private Handler handlerLog = new Handler() {
 	                    	
 	                        spin = (Spinner) textEntryView.findViewById(R.id.spinnerTopic);
 	                        aa = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, listOfTopics);
-	                        //aa.setDropDownViewResource(android.R.layout.simple_spinner_item);
 	                        spin.setAdapter(aa);
 	                        
 	                        alert.setTitle("Publish Message");
@@ -451,7 +263,7 @@ private Handler handlerLog = new Handler() {
 	                    	});
 	                    	alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
 	                    	  public void onClick(DialogInterface dialog, int whichButton) {
-	                    	    // Canceled...
+	                    	    
 	                    	  }
 	                    	});
 	                    	alert.show();
@@ -480,7 +292,6 @@ private Handler handlerLog = new Handler() {
 		                        topicsSubbed = MQTTService.listOfTopicsSubscribed.toArray(topicsSubbed);
 		                        
 		                        aa = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, topicsSubbed);	
-		                        //aa.setDropDownViewResource(android.R.layout.simple_spinner_item);
 		                        spin.setAdapter(aa);
 		                        
 		                        alert2.setTitle("Unsubscribe");
@@ -560,7 +371,6 @@ private Handler handlerLog = new Handler() {
                 
                 spin = (Spinner) textEntryView1.findViewById(R.id.spinnerTopic);
                 aa = new ArrayAdapter<String>(Dashboard.this, android.R.layout.simple_spinner_item, listOfTopics);
-                //aa.setDropDownViewResource(android.R.layout.simple_spinner_item);
                 spin.setAdapter(aa);
                 
                 alert1.setTitle("Subscribe");

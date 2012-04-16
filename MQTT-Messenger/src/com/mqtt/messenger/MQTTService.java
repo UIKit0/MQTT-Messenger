@@ -16,6 +16,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.os.Binder;
 import android.os.IBinder;
@@ -647,17 +648,25 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             //   received message so the app UI can be updated with the new data
             broadcastReceivedMessage(topic, messageBody);
 
-            //Write to Message file
-            byte[] buffer = new byte[2048];
-            try {
-	            FileInputStream fis = openFileInput(FILENAME);
-		        int length = fis.read(buffer);	
-	            FileOutputStream fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
-	            String messageAndTopic = "\nTopic: " + topic + "\nMessage: " + messageBody +"\n\n";
-	        	fos.write(messageAndTopic.getBytes(),length, messageAndTopic.length());
-	        	fis.close();
-	        	fos.close();
+            
+    		SharedPreferences myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
+        	String username = myPrefs.getString("username", "nothing");
+        	
+            if(topic.equals(username)==false)
+            {   
+	            //Write to Message file
+	            byte[] buffer = new byte[2048];
+	            try {
+		            FileInputStream fis = openFileInput(FILENAME);
+			        int length = fis.read(buffer);	
+		            FileOutputStream fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
+		            String messageAndTopic = "\nTopic: " + topic + "\nMessage: " + messageBody +"\n\n";
+		        	fos.write(messageAndTopic.getBytes(),length, messageAndTopic.length());
+		        	fis.close();
+		        	fos.close();
             } catch(Exception e) {}
+            
+        }
             //
             // inform the user (for times when the Activity UI isn't running)
             //   that there is new data available
