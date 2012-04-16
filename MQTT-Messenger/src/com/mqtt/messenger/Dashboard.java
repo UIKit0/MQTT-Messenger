@@ -23,8 +23,10 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,11 +38,11 @@ public class Dashboard extends Activity {
 	
 	private MQTTService mqttService;
 	static boolean active = false;
+	public static String username, password;
 	
 	private boolean mBound = false;
 	private boolean serverConnected = false;
 	
-	private static String username, password;	
 	private static int registerResponse = 0;
 	private static int loginResponse = 0;
 	private static String phone_id;
@@ -52,6 +54,14 @@ public class Dashboard extends Activity {
 	private ScrollView scroller;
 	private AlertDialog alert;
 	private ProgressDialog pd;
+	
+	private Spinner spin;
+    private ArrayAdapter<String> aa ;
+    
+	public String[] listOfTopics = null;
+	public boolean listOfTopicsUpdated = false;
+
+	
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -68,15 +78,17 @@ public class Dashboard extends Activity {
 		
 		messageView = (TextView) findViewById(R.id.message);
 		scroller = (ScrollView) findViewById(R.id.scrollView1);
-		
+	
        
-        if(MQTTService.SERVICE_STAT==false) {
-        	
 			//Start the Service
 			Intent svc = new Intent(Dashboard.this, MQTTService.class);
-	        startService(svc); 
+        
+        	if(startService(svc)==null) 
+        	{
 	        username = getIntent().getStringExtra("username");
 	        password = getIntent().getStringExtra("password");
+	        MQTTService.username = username;
+	        MQTTService.password = password;
 	        phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
 	        
 	        String action = getIntent().getStringExtra("action");
@@ -89,6 +101,8 @@ public class Dashboard extends Activity {
         else
         {
         	//restart the dashboard
+        	username = MQTTService.username;
+    		password = MQTTService.password;
         }
         
         //Bind to the Service
@@ -245,6 +259,8 @@ private Handler handlerLog = new Handler() {
             if(msg.what==1)
             {
             	Toast.makeText(getBaseContext(), "Logged in successfully!", Toast.LENGTH_SHORT).show();
+        		mqttService.subscribeToTopic(username);
+        		getListOfTopics();
             }
             else if(msg.what==2)
             {
@@ -328,19 +344,23 @@ private Handler handlerLog = new Handler() {
             		registerResponse = 2;
             	else if(newData.equals("LOGIN_SUCCESS")) 
             		loginResponse = 1;
-            	else if(newData.equals("LOGIN_FAILURE")) 
+            	else if(newData.equals("LOGIN_FAILED")) 
             		loginResponse = 2;
             	
+            }
+            else if(newTopic.equals(username))
+            {
+            	if(newData.startsWith("TOPICS"))
+            	{
+            		listOfTopicsUpdated = true;
+            		listOfTopics = newData.substring(7).split("\\#");
+            		Toast.makeText(getBaseContext(), "Topics Updated!", Toast.LENGTH_SHORT).show();
+            	}
             }
             else {
             //change newTopic to Original Topic name..
             	String origTopic = null;
-            	try {
-            if(newTopic.startsWith("JynxOutgoing"))
-            	origTopic = newTopic.substring(13);
-            else
             	origTopic = newTopic;
-            	} catch(Exception e){ }
             messageView.append("\nTopic: " + origTopic + "\nMessage: " + newData +"\n\n");
     		scroller.post(new Runnable() {
 				   public void run() {
@@ -358,8 +378,6 @@ private Handler handlerLog = new Handler() {
         stopService(svc); 
     }
     
-    
-    
     public void performMQTTAction(final int id)
     {
     
@@ -370,92 +388,176 @@ private Handler handlerLog = new Handler() {
 	                        final View textEntryView = factory.inflate(R.layout.dialogpublish, null);
 	                        AlertDialog.Builder alert = new AlertDialog.Builder(this);           
 	                    	
-	                    	alert.setTitle("Publish Message");
+	                        spin = (Spinner) textEntryView.findViewById(R.id.spinnerTopic);
+	                        aa = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, listOfTopics);
+	                        //aa.setDropDownViewResource(android.R.layout.simple_spinner_item);
+	                        spin.setAdapter(aa);
+	                        
+	                        alert.setTitle("Publish Message");
 	                    	alert.setView(textEntryView);
 	                    
 	                    	
 	                    	alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 	                    	public void onClick(DialogInterface dialog, int whichButton) {
 	                    		// Do something with value!
-	                    		 EditText topicText = (EditText) textEntryView.findViewById(R.id.editTopic);
-	                    		 EditText topicMessage = (EditText) textEntryView.findViewById(R.id.editMessage);
 	                    		 
-		                    	mqttService.publishToTopic( "JynxIncoming/" + topicText.getText().toString(), username+"#"+password+"#"+topicMessage.getText().toString());
-		                    	
+	                    		Spinner spin = (Spinner) textEntryView.findViewById(R.id.spinnerTopic);
+	                    		EditText topicText = (EditText) textEntryView.findViewById(R.id.editTopic);
+	                    		EditText topicMessage = (EditText) textEntryView.findViewById(R.id.editMessage);
+	                    		String finalTopic;
+	                    		if(topicText.getText().toString().isEmpty()==true)
+	                    			finalTopic = spin.getSelectedItem().toString();
+	                    		else
+	                    		{
+	                    			finalTopic = topicText.getText().toString();
+	                    			mqttService.publishToTopic("CREATE_TOPIC", username+"#"+password+"#"+finalTopic);
+	                    			getListOfTopics();
+	                    		}
+		                    	mqttService.publishToTopic(finalTopic, username+"#"+password+"#"+topicMessage.getText().toString());
 	                    	  }
 	                    	});
 	                    	alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
 	                    	  public void onClick(DialogInterface dialog, int whichButton) {
-	                    	    // Canceled.
+	                    	    // Canceled...
 	                    	  }
 	                    	});
 	                    	alert.show();
 	                    	
 	                    		break;
-	                    case 2: 	                    
-	                    	
-	                    	LayoutInflater factory1 = LayoutInflater.from(this);
-	                        final View textEntryView1 = factory1.inflate(R.layout.dialogsubscribe, null);
-	                        AlertDialog.Builder alert1 = new AlertDialog.Builder(this);           
-	                    	alert1.setTitle("Subscribe");
-	                    	alert1.setView(textEntryView1);
-	                    	
-	                    	alert1.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-	                    	public void onClick(DialogInterface dialog, int whichButton) {
-	                    		// Do something with value!
-	                    		 EditText topicText = (EditText) textEntryView1.findViewById(R.id.editTopic);
-	                    		 
-	                    		 if(topicText.getText().toString().isEmpty()==true)
-	                    			 mqttService.subscribeToTopic( "#" );
-	                    		 else
-	                    			 mqttService.subscribeToTopic( "JynxOutgoing/" + topicText.getText().toString());
-	                    		
-	                    	  
-	                    	  }
-	                    	});
-	                    	alert1.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-	                    	  public void onClick(DialogInterface dialog, int whichButton) {
-	                    	    // Canceled.
-	                    	  }
-	                    	});
-	                    	alert1.show(); 
+	                    case 2: 	          
+	                    		pd = ProgressDialog.show(this, "Fetching Topics", "Please Wait..", true, false);
+	                    		getListOfTopicsImmed();
 	                    
 	                    		break;
 	                    case 3: //get list of topics from server and display multiselect in dialog to unsub..
 	                    	
-	                    	LayoutInflater factory2 = LayoutInflater.from(this);
-	                        final View textEntryView2 = factory2.inflate(R.layout.dialogunsubscribe, null);
-	                        AlertDialog.Builder alert2 = new AlertDialog.Builder(this);           
-	                    	
-	                    	alert2.setTitle("Unsubscribe");
-	                    	alert2.setView(textEntryView2);
-	                    	
-
-	                    	alert2.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-	                    	public void onClick(DialogInterface dialog, int whichButton) {
-	                    		// Do something with value!
-	                    		 EditText topicText = (EditText) textEntryView2.findViewById(R.id.editTopic);
-	                    		 
-	                    		 if(topicText.getText().toString().isEmpty()==true)
-	                    			 mqttService.unsubscribeToTopic( "#" );
-	                    		 else
-	                    			 mqttService.unsubscribeToTopic( "JynxOutgoing/" +topicText.getText().toString());
-	                    		
-	                    	  
-	                    	  }
-	                    	});
-	                    	alert2.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-	                    	  public void onClick(DialogInterface dialog, int whichButton) {
-	                    	    // Canceled.
-	                    	  }
-	                    	});
-	                    	alert2.show();
-	                    	
+	                    	if(MQTTService.listOfTopicsSubscribed.isEmpty()==true)
+	                    	{
+	                    		Toast.makeText(getBaseContext(), "Not Subscribed to Any Topic!", Toast.LENGTH_SHORT).show();
+	                    	}
+	                    	else
+	                    	{
+		                    	LayoutInflater factory2 = LayoutInflater.from(this);
+		                        final View textEntryView2 = factory2.inflate(R.layout.dialogunsubscribe, null);
+		                        AlertDialog.Builder alert2 = new AlertDialog.Builder(this);           
+		                    	
+		                        spin = (Spinner) textEntryView2.findViewById(R.id.spinnerTopic);
+		                        
+		                        String[] topicsSubbed = new String[ MQTTService.listOfTopicsSubscribed.size()];
+		                        topicsSubbed = MQTTService.listOfTopicsSubscribed.toArray(topicsSubbed);
+		                        
+		                        aa = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, topicsSubbed);	
+		                        //aa.setDropDownViewResource(android.R.layout.simple_spinner_item);
+		                        spin.setAdapter(aa);
+		                        
+		                        alert2.setTitle("Unsubscribe");
+		                    	alert2.setView(textEntryView2);
+		                    	
+	
+		                    	alert2.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+		                    	public void onClick(DialogInterface dialog, int whichButton) {
+		                    		// Do something with value!
+		                    		Spinner spin = (Spinner) textEntryView2.findViewById(R.id.spinnerTopic);
+		                    		mqttService.unsubscribeToTopic(spin.getSelectedItem().toString());
+		                    		MQTTService.removeTopicSubscribed(spin.getSelectedItem().toString());
+		                    	  }
+		                    	});
+		                    	alert2.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+		                    	  public void onClick(DialogInterface dialog, int whichButton) {
+		                    	    // Canceled.
+		                    	  }
+		                    	});
+		                    	alert2.show();
+	                    	}
 	                    	
 	                    		break;
 	                    }
     }
 
+    public void getListOfTopics()
+    {
+    		
+    		mqttService.publishToTopic( "TOPICS", username+"#"+password+"#REQUEST");
+            new Thread() {
+            	public void run(){
+            		while(listOfTopicsUpdated==false){
+            			try {
+    						Thread.sleep(100);
+    					} catch (InterruptedException e) {
+    						// TODO Auto-generated catch block
+    						e.printStackTrace();
+    					}
+            		}
+            			handlerTop.sendEmptyMessage(0);
+            	}
+            }.start();
+    		
+    }
+    
+    public void getListOfTopicsImmed()
+    {
+    		mqttService.publishToTopic( "TOPICS", username+"#"+password+"#REQUEST");
+            new Thread() {
+            	public void run(){
+            		while(listOfTopicsUpdated==false){
+            			try {
+    						Thread.sleep(100);
+    					} catch (InterruptedException e) {
+    						// TODO Auto-generated catch block
+    						e.printStackTrace();
+    					}
+            		}
+            			handlerTopImmed.sendEmptyMessage(0);
+            	}
+            }.start();
+    		
+    }
+    
+    private Handler handlerTopImmed = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+                
+        		pd.dismiss();
+        		
+        		listOfTopicsUpdated = false;
+                
+                LayoutInflater factory1 = LayoutInflater.from(Dashboard.this);
+                final View textEntryView1 = factory1.inflate(R.layout.dialogsubscribe, null);
+                AlertDialog.Builder alert1 = new AlertDialog.Builder(Dashboard.this);
+                
+                spin = (Spinner) textEntryView1.findViewById(R.id.spinnerTopic);
+                aa = new ArrayAdapter<String>(Dashboard.this, android.R.layout.simple_spinner_item, listOfTopics);
+                //aa.setDropDownViewResource(android.R.layout.simple_spinner_item);
+                spin.setAdapter(aa);
+                
+                alert1.setTitle("Subscribe");
+            	alert1.setView(textEntryView1);
+            	
+            	alert1.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+            	public void onClick(DialogInterface dialog, int whichButton) {
+            		// Do something with value!
+            		 
+            		Spinner spin = (Spinner) textEntryView1.findViewById(R.id.spinnerTopic);
+            		mqttService.subscribeToTopic( spin.getSelectedItem().toString());
+            		MQTTService.addTopicSubscribed(spin.getSelectedItem().toString());
+            	  }
+            	});
+            	alert1.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            	  public void onClick(DialogInterface dialog, int whichButton) {
+            	    // Canceled.
+            	  }
+            	});
+            	alert1.show(); 
+                
+        }
+    };
+    
+    private Handler handlerTop = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+                listOfTopicsUpdated = false;
+        }
+    };
     
     public void getPendingMessages() {
         mqttService.rebroadcastReceivedMessages();

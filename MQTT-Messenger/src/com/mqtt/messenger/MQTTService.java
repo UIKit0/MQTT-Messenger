@@ -1,7 +1,8 @@
 package com.mqtt.messenger;
 
-import java.util.Calendar;
+import java.util.ArrayList;
 
+import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
@@ -88,13 +89,16 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     private String          brokerHostName       = "test.mosquitto.org";			//Custom Server
     private String          initialTopicName     = "";					//The Phone_id which will be published from Dashboard Activity    
 
+	public static String username, password;	
+    public static ArrayList<String> listOfTopicsSubscribed = new ArrayList<String>();
+	
     // defaults - this sample uses very basic defaults for it's interactions
     //   with message brokers
     private int             brokerPortNumber     = 1883;
     
     private MqttPersistence usePersistence       = null;
     private boolean         cleanStart           = false;
-    private int[]           qualitiesOfService   = { 0 } ;
+    private int[]           qualitiesOfService   = { 1 } ;
     
     
 
@@ -268,6 +272,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     @Override
     public void onDestroy()
     {
+    	Log.d("ServiceMQTT","Entering onDestroy!");
         super.onDestroy();
         SERVICE_STAT = false;
        
@@ -345,7 +350,6 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     }
 
     // public methods that can be used by Activities that bind to the Service
-
     public void publishToTopic(String topicName, String message)
     {
         boolean published = false;
@@ -408,7 +412,6 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             {
                 String[] topics = { topicName };
                 mqttClient.subscribe(topics, qualitiesOfService);
-
                 subscribed = true;
             }
             catch (MqttNotConnectedException e)
@@ -484,7 +487,21 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         }
     }
 
-
+    public static void addTopicSubscribed(String topic)
+    {
+    	listOfTopicsSubscribed.add(topic);
+    }
+    public static void removeTopicSubscribed(String topic)
+    {
+    	   ArrayList<String> result = new ArrayList<String>();
+    	   
+    	    for(String item : listOfTopicsSubscribed)
+    	        if(!topic.equals(item))
+    	            result.add(item);
+    	    
+    	    listOfTopicsSubscribed = result;
+    }
+    
     public MQTTConnectionStatus getConnectionStatus()
     {
         return connectionStatus;

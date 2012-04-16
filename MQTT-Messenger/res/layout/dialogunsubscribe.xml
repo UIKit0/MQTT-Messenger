@@ -11,12 +11,9 @@
         android:text="Topic to Unsubscribe"
         android:textAppearance="?android:attr/textAppearanceMedium" />
 
-    <EditText
-        android:id="@+id/editTopic"
+    <Spinner
+        android:id="@+id/spinnerTopic"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
-
-        <requestFocus />
-    </EditText>
+        android:layout_height="wrap_content" />
     
 </LinearLayout>
