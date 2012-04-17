@@ -31,12 +31,12 @@ public class StartPage extends Activity {
 	public EditText uname,pwd;
 	private String username,password;
 	AlertDialog alert;
-	private static int registerResponse = 0;
-	private static int loginResponse = 0;
-	private static String phone_id;
+	private int registerResponse = 0;
+	private int loginResponse = 0;
+	private String phone_id;
 	private ProgressDialog pd;
 	private MqttClient client;
-	final static String broker = "tcp://test.mosquitto.org:1883";
+	final static String broker = "tcp://192.168.1.3:1885";
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -44,6 +44,7 @@ public class StartPage extends Activity {
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);	//hide the title bar
 		setContentView(R.layout.startpage);
+		
 		phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
 		
 		if(MQTTService.SERVICE_STAT==true)
@@ -68,7 +69,6 @@ public class StartPage extends Activity {
 	public void onDestroy()
 	{
 		super.onDestroy();
-		client.terminate();
 	}
 	
 	@Override
@@ -116,7 +116,7 @@ public class StartPage extends Activity {
 			try {
 				client = (MqttClient) MqttClient.createMqttClient(broker, null);
 				client.registerSimpleHandler(new MessageHandler());
-				client.connect("Temp" + phone_id, true, (short) 240);
+				client.connect("jynx" + phone_id, true, (short) 240);
 				client.subscribe(new String[]{phone_id}, new int[]{1});
 				} catch (MqttException e) {
 			// TODO Auto-generated catch block
@@ -193,7 +193,7 @@ public class StartPage extends Activity {
 		try {
 			client = (MqttClient) MqttClient.createMqttClient(broker, null);
 			client.registerSimpleHandler(new MessageHandler());
-			client.connect("Temp" + phone_id, true, (short) 240);
+			client.connect("jynx" + phone_id, true, (short) 240);
 			client.subscribe(new String[]{phone_id}, new int[]{1});
 			} catch (MqttException e) {
 		// TODO Auto-generated catch block

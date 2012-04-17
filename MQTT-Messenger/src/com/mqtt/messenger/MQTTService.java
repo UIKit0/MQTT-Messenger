@@ -1,11 +1,11 @@
 package com.mqtt.messenger;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.LinkedList;
+import java.util.List;
 
 import android.app.AlarmManager;
 import android.app.Notification;
@@ -41,7 +41,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
     //constants
     public static final String APP_ID = "com.mqtt.messenger";
-    public static final String clientPrefix = "MESSENGER";
+    public static final String clientPrefix = "MQTTMESSENGER";
     
     // constants used to notify the Activity UI of received messages
     public static final String MQTT_MSG_RECEIVED_INTENT = "com.mqtt.messenger.MSGRECVD";
@@ -88,15 +88,16 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     /************************************************************************/
 
 
-    private String          brokerHostName       = "test.mosquitto.org";			//Custom Server
-    private String          initialTopicName     = "";					//The Phone_id which will be published from Dashboard Activity    
+    private String          brokerHostName       = "192.168.1.3";			//Custom Server
+    private String          initialTopicName     = "";					    
 
     public static ArrayList<String> listOfTopicsSubscribed = new ArrayList<String>();
-	public String FILENAME = "mqttMessages";
+	public static List<String>mqttMessages = new LinkedList<String>();
+	public static int mqttMessagesMAXSIZE = 50;
 	
     // defaults - this sample uses very basic defaults for it's interactions
     //   with message brokers
-    private int             brokerPortNumber     = 1883;
+    private int             brokerPortNumber     = 1886;
     
     private MqttPersistence usePersistence       = null;
     private boolean         cleanStart           = false;
@@ -137,7 +138,9 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         // reset status variable to initial state
         connectionStatus = MQTTConnectionStatus.INITIAL;
 
-        initialTopicName = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID); //Unique Topic for this Client
+		SharedPreferences myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
+    	String username = myPrefs.getString("username", "nothing");
+        initialTopicName = username;
         
         // register to be notified whenever the user changes their preferences relating to background data use 
         // so that we can respect the current preference
@@ -213,7 +216,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         //  multiple Services, but it does call this method multiple times)
         // if we have been running already, we re-send any stored data
         rebroadcastStatus();
-        rebroadcastReceivedMessages();
+        //rebroadcastReceivedMessages();
 
         // if the Service was already running and we're already connected - we don't need to do anything
         if (isAlreadyConnected() == false)
@@ -639,8 +642,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         //
         //  for times when the app's Activity UI is not running, the Service
         //   will need to safely store the data that it receives
-        if (addReceivedMessageToStore(topic, messageBody))
-        {
+
+        
             // this is a new message - a value we haven't seen before
 
             //
@@ -654,19 +657,12 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         	
             if(topic.equals(username)==false)
             {   
-	            //Write to Message file
-	            byte[] buffer = new byte[2048];
-	            try {
-		            FileInputStream fis = openFileInput(FILENAME);
-			        int length = fis.read(buffer);	
-		            FileOutputStream fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
-		            String messageAndTopic = "\nTopic: " + topic + "\nMessage: " + messageBody +"\n\n";
-		        	fos.write(messageAndTopic.getBytes(),length, messageAndTopic.length());
-		        	fis.close();
-		        	fos.close();
-            } catch(Exception e) {}
-            
-        }
+	            //Write to Message Cache
+            	String msg = "\nTopic: " + topic + "\nMessage: " + messageBody +"\n\n";
+            	if(mqttMessages.size()==mqttMessagesMAXSIZE)
+            		mqttMessages.remove(0);
+            	mqttMessages.add(msg);
+            }
             //
             // inform the user (for times when the Activity UI isn't running)
             //   that there is new data available
@@ -675,7 +671,6 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             
             if(Dashboard.active==false)
             	notifyUser("New Message Received", topic, messageBody);
-        }
 
         // receiving this message will have kept the connection alive for us, so
         //  we take advantage of this to postpone the next scheduled ping
