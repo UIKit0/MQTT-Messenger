@@ -1,6 +1,7 @@
 package com.mqtt.messenger;
 
 import android.app.Activity;
+
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -28,16 +29,16 @@ import com.ibm.mqtt.MqttSimpleCallback;
 
 public class StartPage extends Activity {
 
-	public EditText uname,pwd;
+	public EditText uname,pwd,server;
 	private String username,password;
 	AlertDialog alert;
 	private int registerResponse = 0;
 	private int loginResponse = 0;
 	private String phone_id;
 	private ProgressDialog pd;
-	private MqttClient client;
-	final static String broker = "tcp://192.168.1.3:1885";
-
+	private MqttClient clientRecv,client;
+	static String broker = null, broker_incoming = null, broker_outgoing = null;
+	int incomingPort = 1885, outgoingPort = 1886;
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		//Basic stuff
@@ -59,7 +60,7 @@ public class StartPage extends Activity {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			builder.setMessage("\nAn Android Application for Realtime Messaging System using MQTT\n\nTeam Members:\n\nDinesh Babu K G\nJagadeesh M\nVasantharajan S");
 			alert = builder.create();
-			
+		
 		}
 		
 	}
@@ -97,6 +98,22 @@ public class StartPage extends Activity {
 		username = uname.getText().toString();
 		pwd = (EditText) findViewById(R.id.editText2);
 		password = pwd.getText().toString();		
+		
+		server = (EditText) findViewById(R.id.editText3);
+		broker = server.getText().toString();
+		broker_incoming = "tcp://" + broker + ":" + incomingPort;
+		broker_outgoing = "tcp://" + broker + ":" + outgoingPort;
+		
+		try {
+			client = (MqttClient) MqttClient.createMqttClient(broker_outgoing, null);
+			client.registerSimpleHandler(new MessageHandler());
+			client.connect("jynx" + phone_id, true, (short) 240);
+			client.subscribe(new String[]{phone_id}, new int[]{1});
+			} catch (MqttException e) {
+		// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		
 		if( ((Button)v).getText().equals("Login"))
 		{
 			processLogin();
@@ -112,19 +129,20 @@ public class StartPage extends Activity {
 	{
 
 	        String msg = phone_id+"#"+username+"#"+password;
-	        
+	        String enc_msg = Encrypter.encrypt(msg);
 			try {
-				client = (MqttClient) MqttClient.createMqttClient(broker, null);
+				client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
 				client.registerSimpleHandler(new MessageHandler());
-				client.connect("jynx" + phone_id, true, (short) 240);
-				client.subscribe(new String[]{phone_id}, new int[]{1});
+				client.connect("jynxA" + phone_id, true, (short) 240);
+				//client.subscribe(new String[]{phone_id}, new int[]{1});
 				} catch (MqttException e) {
 			// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			
 				try {
-					client.publish("REGISTER", msg.getBytes() ,1, false);
+					client.publish("REGISTER", enc_msg.getBytes() ,1, false);
+					Log.d("MQTT",enc_msg);
 				} catch (MqttNotConnectedException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -189,19 +207,20 @@ public class StartPage extends Activity {
 	public void processLogin()
 	{
 		String msg = phone_id+"#"+username+"#"+password;
-		
+		String enc_msg = Encrypter.encrypt(msg);
 		try {
-			client = (MqttClient) MqttClient.createMqttClient(broker, null);
+			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
 			client.registerSimpleHandler(new MessageHandler());
 			client.connect("jynx" + phone_id, true, (short) 240);
-			client.subscribe(new String[]{phone_id}, new int[]{1});
+			//client.subscribe(new String[]{phone_id}, new int[]{1});
 			} catch (MqttException e) {
 		// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		
 			try {
-				client.publish("LOGIN", msg.getBytes() ,1, false);
+				client.publish("LOGIN", enc_msg.getBytes() ,1, false);
+				Log.d("MQTT",enc_msg);
 			} catch (MqttNotConnectedException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -249,6 +268,7 @@ public class StartPage extends Activity {
 			        SharedPreferences.Editor prefsEditor = myPrefs.edit();
 			        prefsEditor.putString("username", username);
 			        prefsEditor.putString("password", password);
+			        prefsEditor.putString("broker", broker);
 			        prefsEditor.commit();
 			        
 			        Toast.makeText(getBaseContext(), "Login Correct", Toast.LENGTH_SHORT).show();
@@ -272,7 +292,7 @@ public class StartPage extends Activity {
 					String newData = msg.getData().getString("message");
 	            	if(newData.equals("REG_SUCCESS")) 
 	            		registerResponse = 1;
-	            	else if(newData.equals("REG_FAILURE")) 
+	            	else if(newData.equals("REG_FAILED")) 
 	            		registerResponse = 2;
 	            	else if(newData.equals("LOGIN_SUCCESS")) 
 	            		loginResponse = 1;

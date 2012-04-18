@@ -1,4 +1,9 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">" />
+    
+    <item android:id="@+id/dashitem6"
+        android:title="Create Topic"
+        android:icon="@android:drawable/ic_menu_edit"
+         />
     <item android:id="@+id/dashitem1"
         android:title="Publish"
         android:icon="@android:drawable/ic_menu_send"

@@ -88,7 +88,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     /************************************************************************/
 
 
-    private String          brokerHostName       = "192.168.1.3";			//Custom Server
+    private String          brokerHostName;			//Custom Server
     private String          initialTopicName     = "";					    
 
     public static ArrayList<String> listOfTopicsSubscribed = new ArrayList<String>();
@@ -140,6 +140,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
 		SharedPreferences myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
     	String username = myPrefs.getString("username", "nothing");
+    	brokerHostName 	= myPrefs.getString("broker", "localhost");
         initialTopicName = username;
         
         // register to be notified whenever the user changes their preferences relating to background data use 

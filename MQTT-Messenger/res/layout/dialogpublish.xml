@@ -8,7 +8,7 @@
         android:id="@+id/textView0"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Existing Topic"
+        android:text="Topic"
         android:textAppearance="?android:attr/textAppearanceMedium" />
     
     <Spinner
@@ -17,26 +17,9 @@
         android:layout_height="wrap_content" />
 
     <TextView
-        android:id="@+id/textView1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8pt"
-        android:text="OR Create New Topic"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
-
-    <EditText
-        android:id="@+id/editTopic"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
-
-        <requestFocus />
-    </EditText>
-
-    <TextView
         android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8pt"
         android:text="Message"
         android:textAppearance="?android:attr/textAppearanceMedium" />
 
