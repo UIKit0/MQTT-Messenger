@@ -79,8 +79,8 @@ public class Encrypter {
 				{
 					x[k]=n[j]%10;
 					n[j]/=10;
-					//int aNumber = (int) (Math.random()*100000);
-					//x[k]+=((1+aNumber%8)*10);
+					int aNumber = (int) (Math.random()*100000);
+					x[k]+=((1+aNumber%8)*10);
 					x[k]+=32;
 				}
 				
@@ -90,12 +90,11 @@ public class Encrypter {
 					output[index]=temp;
 					switch(output[index])
 					{
-					case '`':
-					case '/': 	output[index]='V';
-							  	break;
+					case '`':  output[index]='V';
+				  				break;
 					case '\'': output[index]=';';
 								break;
-					case '\"': output[index]='6';
+					case '"': output[index]='6';
 								break;
 					case '\\': output[index]='z';
 							   break;

@@ -1,7 +1,6 @@
 package com.mqtt.messenger;
 
 import android.app.Activity;
-
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -17,6 +16,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -36,16 +36,17 @@ public class StartPage extends Activity {
 	private int loginResponse = 0;
 	private String phone_id;
 	private ProgressDialog pd;
-	private MqttClient clientRecv,client;
+	private MqttClient client;
 	static String broker = null, broker_incoming = null, broker_outgoing = null;
 	int incomingPort = 1885, outgoingPort = 1886;
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		//Basic stuff
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);	//hide the title bar
 		setContentView(R.layout.startpage);
-		
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
 		
 		if(MQTTService.SERVICE_STAT==true)
@@ -60,16 +61,21 @@ public class StartPage extends Activity {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			builder.setMessage("\nAn Android Application for Realtime Messaging System using MQTT\n\nTeam Members:\n\nDinesh Babu K G\nJagadeesh M\nVasantharajan S");
 			alert = builder.create();
-		
 		}
-		
+		Log.d("MQTT","Exiting OnCreate");
 	}
-
+	@Override
+	public void onResume()
+	{
+		super.onResume();
+		Log.d("MQTT","Exiting OnResume");
+	}
 
 	@Override
 	public void onDestroy()
 	{
 		super.onDestroy();
+		Log.d("MQTT","Exiting OnDestroy");
 	}
 	
 	@Override
@@ -110,7 +116,6 @@ public class StartPage extends Activity {
 			client.connect("jynx" + phone_id, true, (short) 240);
 			client.subscribe(new String[]{phone_id}, new int[]{1});
 			} catch (MqttException e) {
-		// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		
@@ -134,9 +139,7 @@ public class StartPage extends Activity {
 				client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
 				client.registerSimpleHandler(new MessageHandler());
 				client.connect("jynxA" + phone_id, true, (short) 240);
-				//client.subscribe(new String[]{phone_id}, new int[]{1});
 				} catch (MqttException e) {
-			// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			
@@ -144,16 +147,12 @@ public class StartPage extends Activity {
 					client.publish("REGISTER", enc_msg.getBytes() ,1, false);
 					Log.d("MQTT",enc_msg);
 				} catch (MqttNotConnectedException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				} catch (MqttPersistenceException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				} catch (IllegalArgumentException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				} catch (MqttException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}	
 				
@@ -164,7 +163,6 @@ public class StartPage extends Activity {
 	        			try {
 							Thread.sleep(100);
 						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 	        		}
@@ -212,9 +210,7 @@ public class StartPage extends Activity {
 			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
 			client.registerSimpleHandler(new MessageHandler());
 			client.connect("jynx" + phone_id, true, (short) 240);
-			//client.subscribe(new String[]{phone_id}, new int[]{1});
 			} catch (MqttException e) {
-		// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		
@@ -302,7 +298,6 @@ public class StartPage extends Activity {
 		}
 	};
 	
-	@SuppressWarnings("unused")
 	private class MessageHandler implements MqttSimpleCallback 
 	{
 		public void publishArrived(String _topic, byte[] payload, int qos, boolean retained) throws Exception 

@@ -101,7 +101,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     
     private MqttPersistence usePersistence       = null;
     private boolean         cleanStart           = false;
-    private int[]           qualitiesOfService   = { 1 } ;
+    private int[]           qualitiesOfService   = { 0 } ;
     
     
 
@@ -280,8 +280,11 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     {
     	Log.d("ServiceMQTT","Entering onDestroy!");
         super.onDestroy();
+        
         SERVICE_STAT = false;
-       
+        listOfTopicsSubscribed.clear();
+        mqttMessages.clear();
+        
         disconnectFromBroker();
 
         broadcastServiceStatus("Disconnected");
@@ -659,7 +662,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             if(topic.equals(username)==false)
             {   
 	            //Write to Message Cache
-            	String msg = "\nTopic: " + topic + "\nMessage: " + messageBody +"\n\n";
+            	String msg = "\nTopic:   " + topic + "\nMessage: " + messageBody +"\n\n";
             	if(mqttMessages.size()==mqttMessagesMAXSIZE)
             		mqttMessages.remove(0);
             	mqttMessages.add(msg);
@@ -948,42 +951,6 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             scheduleNextPing();
         }
     }
-
-    /*  DATA STORAGE OF RECEIVED MESSAGES */
-
-    //Local HashTable to Hold The MQTT Messages Sent out From the Server
-    private Hashtable<String, String> dataCache = new Hashtable<String, String>(); 
-
-    private boolean addReceivedMessageToStore(String key, String value)
-    {
-        String previousValue = null;
-
-        if (value.length() == 0)
-        {
-            previousValue = dataCache.remove(key);
-        }
-        else
-        {
-            previousValue = dataCache.put(key, value);
-        }
-        //  we return true if the received message is NEW
-        return ((previousValue == null) || (previousValue.equals(value) == false));
-    }
-
-    // Provide a public interface, so Activities that bind to the Service can request access to previously received messages
-    //This Method broadcasts all the previously Received Messages
-    public void rebroadcastReceivedMessages()
-    {
-        Enumeration<String> e = dataCache.keys();
-        while(e.hasMoreElements())
-        {
-            String nextKey = e.nextElement();
-            String nextValue = dataCache.get(nextKey);
-
-            broadcastReceivedMessage(nextKey, nextValue);
-        }
-    }
-
 
     /* METHODS - internal utility methods */
     

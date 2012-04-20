@@ -24,6 +24,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ScrollView;
@@ -33,7 +34,6 @@ import android.widget.Toast;
 
 import com.ibm.mqtt.MqttClient;
 import com.ibm.mqtt.MqttException;
-import com.ibm.mqtt.MqttPersistenceException;
 import com.ibm.mqtt.MqttSimpleCallback;
 import com.mqtt.messenger.MQTTService.LocalBinder;
 
@@ -43,9 +43,11 @@ public class Dashboard extends Activity {
 	
 	private MQTTService mqttService;
 	static boolean active = false;
-	public static String username, password;
-	
 	private boolean mBound = false;
+	
+	public static String username, password;
+	public String[] listOfTopics = null;
+	public boolean listOfTopicsUpdated = false;
 	
 	private StatusUpdateReceiver statusUpdateIntentReceiver;
     private MQTTMessageReceiver  messageIntentReceiver;
@@ -54,18 +56,12 @@ public class Dashboard extends Activity {
 	private ScrollView scroller;
 	private AlertDialog alert;
 	private ProgressDialog pd;
-	
 	private Spinner spin;
     private ArrayAdapter<String> aa ;
-    
-	public String[] listOfTopics = null;
-	public boolean listOfTopicsUpdated = false;
 
-	
 	//For Sending Incoming Requests
 	private MqttClient client;
 	public String phone_id;
-	
 	static String broker, broker_incoming;
 	int incomingPort = 1885;
 	
@@ -77,7 +73,7 @@ public class Dashboard extends Activity {
     	super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.dashpage);
-
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		//Info Dialog Builder
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage("\nAn Android Application for Realtime Messaging System using MQTT\n\nTeam Members:\n\nDinesh Babu K G\nJagadeesh M\nVasantharajan S");
@@ -208,9 +204,8 @@ public class Dashboard extends Activity {
             	}
             }
             else {
-            	//change newTopic to Original Topic name..
 
-            	messageView.append("\nTopic: " + newTopic + "\nMessage: " + newData +"\n\n");
+            	messageView.append("\nTopic:   " + newTopic + "\nMessage: " + newData +"\n\n");
                 
             	scroller.post(new Runnable() {
 				   public void run() {
@@ -255,7 +250,7 @@ public class Dashboard extends Activity {
 		                    	
 		                    	alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 		                    	public void onClick(DialogInterface dialog, int whichButton) {
-		                    		// Do something with value!
+		                    		
 		                    		 
 		                    		Spinner spin = (Spinner) textEntryView.findViewById(R.id.spinnerTopic);
 		                    		EditText topicMessage = (EditText) textEntryView.findViewById(R.id.editMessage);
@@ -292,7 +287,7 @@ public class Dashboard extends Activity {
 	                    		getListOfTopicsImmed();
 	                    
 	                    		break;
-	                    case 3: //get list of topics from server and display multiselect in dialog to unsub..
+	                    case 3:
 	                    	
 	                    	if(MQTTService.listOfTopicsSubscribed.isEmpty()==true)
 	                    	{
@@ -318,7 +313,7 @@ public class Dashboard extends Activity {
 	
 		                    	alert2.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 		                    	public void onClick(DialogInterface dialog, int whichButton) {
-		                    		// Do something with value!
+		                    		
 		                    		Spinner spin = (Spinner) textEntryView2.findViewById(R.id.spinnerTopic);
 		                    		mqttService.unsubscribeToTopic(spin.getSelectedItem().toString());
 		                    		MQTTService.removeTopicSubscribed(spin.getSelectedItem().toString());
@@ -326,7 +321,7 @@ public class Dashboard extends Activity {
 		                    	});
 		                    	alert2.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
 		                    	  public void onClick(DialogInterface dialog, int whichButton) {
-		                    	    // Canceled.
+		                    	
 		                    	  }
 		                    	});
 		                    	alert2.show();
@@ -344,36 +339,48 @@ public class Dashboard extends Activity {
 	                    	                    	
 	                    	alert3.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
 	                    	public void onClick(DialogInterface dialog, int whichButton) {
-	                    		// Do something with value!
-	                    		 
-	                    		EditText topic = (EditText) textEntryView3.findViewById(R.id.editCreateTopic);
-	                    		
-	                    		String topicName = topic.getText().toString();
-                    			String msg = username+"#"+password+"#"+topic.getText().toString();
-                    			String enc_msg = Encrypter.encrypt(msg);
-	                    		try {
-	                    			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
-	                    			client.registerSimpleHandler(new MessageHandler());
-	                    			client.connect("Temp" + phone_id, true, (short) 240);
-	                    			client.publish("CREATE_TOPIC", enc_msg.getBytes() , 1, false);
-	        	            		MQTTService.addTopicSubscribed(topicName);
-	                    			mqttService.subscribeToTopic(topicName);
-	                    			} catch (MqttException e) {
-	                    				e.printStackTrace();
-	                    			}
-		                    	//mqttService.publishToTopic(finalTopic, username+"#"+password+"#"+topicMessage.getText().toString());
+	                    	
+                    		 
+                    		EditText topic = (EditText) textEntryView3.findViewById(R.id.editCreateTopic);
+                    		
+                    		String topicName = topic.getText().toString();
+                			String msg = username+"#"+password+"#"+topic.getText().toString();
+                			String enc_msg = Encrypter.encrypt(msg);
+                    		try {
+                    			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
+                    			client.registerSimpleHandler(new MessageHandler());
+                    			client.connect("Temp" + phone_id, true, (short) 240);
+                    			client.publish("CREATE_TOPIC", enc_msg.getBytes() , 1, false);
+        	            		MQTTService.addTopicSubscribed(topicName);
+                    			mqttService.subscribeToTopic(topicName);
+                    			} catch (MqttException e) {
+                    				e.printStackTrace();
+                    			}
+	                    	
 
-	                    	  }
-	                    	});
-	                    	alert3.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-	                    	  public void onClick(DialogInterface dialog, int whichButton) {
-	                    	  }
-	                    	});
-	                    	alert3.show();
+                    	  }
+                    	});
+                    	alert3.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    	  public void onClick(DialogInterface dialog, int whichButton) {
+                    	  }
+                    	});
+                    	alert3.show();
 	                    break;
 	                    }
     }
 
+    public void publishToIncoming(String topic, String message)
+    {
+    	String enc_msg = Encrypter.encrypt(message);
+		try {
+			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
+			client.registerSimpleHandler(new MessageHandler());
+			client.connect("jynx" + phone_id, true, (short) 240);
+			client.publish(topic, enc_msg.getBytes(), 1, false);
+			} catch (MqttException e) {
+				e.printStackTrace();
+			}
+    }
     
     public void getListOfTopicsImmed()
     {
@@ -392,19 +399,6 @@ public class Dashboard extends Activity {
             	}
             }.start();
     		
-    }
-    
-    public void publishToIncoming(String topic, String message)
-    {
-    	String enc_msg = Encrypter.encrypt(message);
-		try {
-			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
-			client.registerSimpleHandler(new MessageHandler());
-			client.connect("jynx" + phone_id, true, (short) 240);
-			client.publish(topic, enc_msg.getBytes(), 1, false);
-			} catch (MqttException e) {
-				e.printStackTrace();
-			}
     }
     
     private Handler handlerTopImmed = new Handler() {
@@ -446,17 +440,6 @@ public class Dashboard extends Activity {
         }
     };
     
-    private Handler handlerTop = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-                listOfTopicsUpdated = false;
-        }
-    };
-    
-    public void getPendingMessages() {
-        mqttService.rebroadcastReceivedMessages();
-    }
-    
 	@SuppressWarnings("unused")
 	private class MessageHandler implements MqttSimpleCallback 
 	{
@@ -480,6 +463,7 @@ public class Dashboard extends Activity {
         inflater.inflate(R.menu.dashmenu, menu);
         return true;
     }
+    
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
