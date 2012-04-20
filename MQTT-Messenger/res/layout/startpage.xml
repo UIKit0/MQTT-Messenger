@@ -23,7 +23,7 @@
         android:id="@+id/textView3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Server Address"
+        android:text="Server Details"
         android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <EditText
@@ -32,9 +32,32 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:freezesText="true"
-        >
+        android:inputType="textEmailAddress" >
         <requestFocus />
         </EditText>
+
+    <LinearLayout
+        android:id="@+id/linearLayout1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <EditText
+            android:id="@+id/editInPort"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.10"
+            android:hint="Incoming Port"
+            android:inputType="number" />
+
+        <EditText
+            android:id="@+id/editOutPort"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.10"
+            android:hint="Outgoing Port"
+            android:inputType="number" />
+
+    </LinearLayout>
 
     <TextView
         android:id="@+id/textView1"
@@ -68,23 +91,29 @@
         android:freezesText="true"
          />
 
-    <Button
-        android:id="@+id/button1"
-        android:layout_width="104dp"
+    <LinearLayout
+        android:id="@+id/linearLayout2"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Login"
-        android:textSize="8pt"
-        android:layout_gravity="center_horizontal"
-        android:onClick="processLogin" />
+        android:gravity="center_horizontal" >
 
-    <Button
-        android:id="@+id/Button01"
-        android:layout_width="104dp"
-        android:layout_height="wrap_content"
-        android:text="Register"
-        android:textSize="8pt"
-        android:layout_gravity="center_horizontal" 
-        android:onClick="processLogin" />
+        <Button
+            android:id="@+id/button1"
+            android:layout_width="104dp"
+            android:layout_height="wrap_content"
+            android:onClick="processLogin"
+            android:text="Login"
+            android:textSize="8pt" />
+
+        <Button
+            android:id="@+id/Button01"
+            android:layout_width="104dp"
+            android:layout_height="wrap_content"
+            android:onClick="processLogin"
+            android:text="Register"
+            android:textSize="8pt" />
+
+    </LinearLayout>
     
 </LinearLayout>
 

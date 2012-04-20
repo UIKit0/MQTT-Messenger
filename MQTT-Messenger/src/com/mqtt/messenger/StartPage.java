@@ -29,7 +29,7 @@ import com.ibm.mqtt.MqttSimpleCallback;
 
 public class StartPage extends Activity {
 
-	public EditText uname,pwd,server;
+	public EditText uname,pwd,server,portI,portO;
 	private String username,password;
 	AlertDialog alert;
 	private int registerResponse = 0;
@@ -38,7 +38,7 @@ public class StartPage extends Activity {
 	private ProgressDialog pd;
 	private MqttClient client;
 	static String broker = null, broker_incoming = null, broker_outgoing = null;
-	int incomingPort = 1885, outgoingPort = 1886;
+	int incomingPort, outgoingPort;
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -107,13 +107,20 @@ public class StartPage extends Activity {
 		
 		server = (EditText) findViewById(R.id.editText3);
 		broker = server.getText().toString();
+		
+		portI = (EditText) findViewById(R.id.editInPort);
+		incomingPort = Integer.parseInt(portI.getText().toString());
+		
+		portO = (EditText) findViewById(R.id.editOutPort);
+		outgoingPort = Integer.parseInt(portO.getText().toString());
+		
 		broker_incoming = "tcp://" + broker + ":" + incomingPort;
 		broker_outgoing = "tcp://" + broker + ":" + outgoingPort;
 		
 		try {
 			client = (MqttClient) MqttClient.createMqttClient(broker_outgoing, null);
 			client.registerSimpleHandler(new MessageHandler());
-			client.connect("jynx" + phone_id, true, (short) 240);
+			client.connect("jynxRV" + phone_id, true, (short) 240);
 			client.subscribe(new String[]{phone_id}, new int[]{1});
 			} catch (MqttException e) {
 				e.printStackTrace();
@@ -138,7 +145,7 @@ public class StartPage extends Activity {
 			try {
 				client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
 				client.registerSimpleHandler(new MessageHandler());
-				client.connect("jynxA" + phone_id, true, (short) 240);
+				client.connect("jynxR" + phone_id, true, (short) 240);
 				} catch (MqttException e) {
 					e.printStackTrace();
 				}
@@ -209,7 +216,7 @@ public class StartPage extends Activity {
 		try {
 			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
 			client.registerSimpleHandler(new MessageHandler());
-			client.connect("jynx" + phone_id, true, (short) 240);
+			client.connect("jynxL" + phone_id, true, (short) 240);
 			} catch (MqttException e) {
 				e.printStackTrace();
 			}
@@ -265,6 +272,8 @@ public class StartPage extends Activity {
 			        prefsEditor.putString("username", username);
 			        prefsEditor.putString("password", password);
 			        prefsEditor.putString("broker", broker);
+			        prefsEditor.putInt("port_in", incomingPort);
+			        prefsEditor.putInt("port_out", outgoingPort);
 			        prefsEditor.commit();
 			        
 			        Toast.makeText(getBaseContext(), "Login Correct", Toast.LENGTH_SHORT).show();

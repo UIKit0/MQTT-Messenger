@@ -97,11 +97,11 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 	
     // defaults - this sample uses very basic defaults for it's interactions
     //   with message brokers
-    private int             brokerPortNumber     = 1886;
+    private int             brokerPortNumber;
     
     private MqttPersistence usePersistence       = null;
     private boolean         cleanStart           = false;
-    private int[]           qualitiesOfService   = { 0 } ;
+    private int[]           qualitiesOfService   = { 1 } ;
     
     
 
@@ -141,6 +141,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		SharedPreferences myPrefs = this.getSharedPreferences("myPrefs", MODE_PRIVATE);
     	String username = myPrefs.getString("username", "nothing");
     	brokerHostName 	= myPrefs.getString("broker", "localhost");
+    	brokerPortNumber = myPrefs.getInt("port_out", 1883);
         initialTopicName = username;
         
         // register to be notified whenever the user changes their preferences relating to background data use 

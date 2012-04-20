@@ -63,7 +63,7 @@ public class Dashboard extends Activity {
 	private MqttClient client;
 	public String phone_id;
 	static String broker, broker_incoming;
-	int incomingPort = 1885;
+	int incomingPort;
 	
     @Override
     public void onCreate(Bundle savedInstanceState) 
@@ -87,7 +87,7 @@ public class Dashboard extends Activity {
     	username = myPrefs.getString("username", "nothing");
     	password = myPrefs.getString("password", "nothing");
     	broker 	 = myPrefs.getString("broker", "localhost");
-    	
+    	incomingPort = myPrefs.getInt("port_in", 1883);
     	broker_incoming = "tcp://" + broker + ":" + incomingPort;
 		
     	//Start the Service        		
