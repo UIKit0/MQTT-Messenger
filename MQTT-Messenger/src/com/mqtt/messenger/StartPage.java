@@ -40,6 +40,9 @@ public class StartPage extends Activity {
 	static String broker = null, broker_incoming = null, broker_outgoing = null;
 	int incomingPort, outgoingPort;
 	
+	private int pubQoS = 2 ;
+	private int[] subQoS = { 2 };
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		//Basic stuff
@@ -121,7 +124,7 @@ public class StartPage extends Activity {
 			client = (MqttClient) MqttClient.createMqttClient(broker_outgoing, null);
 			client.registerSimpleHandler(new MessageHandler());
 			client.connect("jynxRV" + phone_id, true, (short) 240);
-			client.subscribe(new String[]{phone_id}, new int[]{1});
+			client.subscribe(new String[]{phone_id}, subQoS);
 			} catch (MqttException e) {
 				e.printStackTrace();
 			}
@@ -151,7 +154,7 @@ public class StartPage extends Activity {
 				}
 			
 				try {
-					client.publish("REGISTER", enc_msg.getBytes() ,1, false);
+					client.publish("REGISTER", enc_msg.getBytes() ,pubQoS, false);
 					Log.d("MQTT",enc_msg);
 				} catch (MqttNotConnectedException e1) {
 					e1.printStackTrace();
@@ -222,7 +225,7 @@ public class StartPage extends Activity {
 			}
 		
 			try {
-				client.publish("LOGIN", enc_msg.getBytes() ,1, false);
+				client.publish("LOGIN", enc_msg.getBytes() ,pubQoS, false);
 				Log.d("MQTT",enc_msg);
 			} catch (MqttNotConnectedException e1) {
 				// TODO Auto-generated catch block

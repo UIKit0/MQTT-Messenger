@@ -65,6 +65,8 @@ public class Dashboard extends Activity {
 	static String broker, broker_incoming;
 	int incomingPort;
 	
+	int pubQoS = 2;
+	
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -264,7 +266,7 @@ public class Dashboard extends Activity {
 		                    			client.registerSimpleHandler(new MessageHandler());
 		                    			client.connect("Temp" + phone_id, true, (short) 240);
 		                    			
-		                    			client.publish(finalTopic, enc_msg.getBytes(), 1, false);
+		                    			client.publish(finalTopic, enc_msg.getBytes(), pubQoS, false);
 		                    			mqttService.subscribeToTopic(finalTopic);
 		                    			
 		                    			} catch (MqttException e) {
@@ -350,7 +352,7 @@ public class Dashboard extends Activity {
                     			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
                     			client.registerSimpleHandler(new MessageHandler());
                     			client.connect("Temp" + phone_id, true, (short) 240);
-                    			client.publish("CREATE_TOPIC", enc_msg.getBytes() , 1, false);
+                    			client.publish("CREATE_TOPIC", enc_msg.getBytes() , pubQoS, false);
         	            		MQTTService.addTopicSubscribed(topicName);
                     			mqttService.subscribeToTopic(topicName);
                     			} catch (MqttException e) {
@@ -376,7 +378,7 @@ public class Dashboard extends Activity {
 			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
 			client.registerSimpleHandler(new MessageHandler());
 			client.connect("jynx" + phone_id, true, (short) 240);
-			client.publish(topic, enc_msg.getBytes(), 1, false);
+			client.publish(topic, enc_msg.getBytes(), pubQoS, false);
 			} catch (MqttException e) {
 				e.printStackTrace();
 			}

@@ -2,8 +2,6 @@ package com.mqtt.messenger;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Enumeration;
-import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -101,7 +99,9 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     
     private MqttPersistence usePersistence       = null;
     private boolean         cleanStart           = false;
-    private int[]           qualitiesOfService   = { 1 } ;
+    
+    private int[]           subQoS   = { 2 } ;
+    private int             pubQoS   =  2  ;
     
     
 
@@ -375,7 +375,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         {
             try
             {
-                mqttClient.publish(topicName, message.getBytes() ,1, false);
+                mqttClient.publish(topicName, message.getBytes() ,pubQoS, false);
                 published = true;
             }
             catch (MqttNotConnectedException e)
@@ -421,7 +421,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             try
             {
                 String[] topics = { topicName };
-                mqttClient.subscribe(topics, qualitiesOfService);
+                mqttClient.subscribe(topics, subQoS); 
                 subscribed = true;
             }
             catch (MqttNotConnectedException e)
