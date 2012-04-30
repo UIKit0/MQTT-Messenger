@@ -1,5 +1,7 @@
 package com.mqtt.messenger;
 
+import java.util.regex.Pattern;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -101,22 +103,44 @@ public class StartPage extends Activity {
 		return true;
 	}
 	
+	private boolean validateIPAddress(String iPaddress){
+        final Pattern IP_PATTERN =  Pattern.compile("^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])$");
+    return IP_PATTERN.matcher(iPaddress).matches();
+}
+	
 	public void processLogin(View v) {
 		
 		uname = (EditText) findViewById(R.id.editText1);
 		username = uname.getText().toString();
+		
 		pwd = (EditText) findViewById(R.id.editText2);
-		password = pwd.getText().toString();		
+		password = pwd.getText().toString();
+		
+		if(username.isEmpty() || password.isEmpty())
+		{
+			Toast.makeText(getBaseContext(), "Invalid Login Details", Toast.LENGTH_SHORT).show();
+			return;
+		}
 		
 		server = (EditText) findViewById(R.id.editText3);
 		broker = server.getText().toString();
 		
+		if(validateIPAddress(broker)==false)
+		{
+			Toast.makeText(getBaseContext(), "Invalid Server Address", Toast.LENGTH_SHORT).show();
+			return;
+		}
+		
 		portI = (EditText) findViewById(R.id.editInPort);
-		incomingPort = Integer.parseInt(portI.getText().toString());
-		
 		portO = (EditText) findViewById(R.id.editOutPort);
+		try
+		{
+		incomingPort = Integer.parseInt(portI.getText().toString());
 		outgoingPort = Integer.parseInt(portO.getText().toString());
-		
+		} catch(Exception e) {
+			Toast.makeText(getBaseContext(), "Invalid Port Addresses", Toast.LENGTH_SHORT).show();
+			return;
+		}
 		broker_incoming = "tcp://" + broker + ":" + incomingPort;
 		broker_outgoing = "tcp://" + broker + ":" + outgoingPort;
 		
@@ -131,7 +155,7 @@ public class StartPage extends Activity {
 		
 		if( ((Button)v).getText().equals("Login"))
 		{
-			processLogin();
+			processLogen();
 		}
 		else if( ((Button)v).getText().equals("Register"))
 		{
@@ -212,7 +236,7 @@ public class StartPage extends Activity {
 	    }
 	};
 	  
-	public void processLogin()
+	public void processLogen()
 	{
 		String msg = phone_id+"#"+username+"#"+password;
 		String enc_msg = Encrypter.encrypt(msg);
