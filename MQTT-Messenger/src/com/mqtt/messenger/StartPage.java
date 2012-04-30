@@ -38,7 +38,7 @@ public class StartPage extends Activity {
 	private int loginResponse = 0;
 	private String phone_id;
 	private ProgressDialog pd;
-	private MqttClient client;
+	private MqttClient client = null;
 	static String broker = null, broker_incoming = null, broker_outgoing = null;
 	int incomingPort, outgoingPort;
 	
@@ -169,17 +169,19 @@ public class StartPage extends Activity {
 
 	        String msg = phone_id+"#"+username+"#"+password;
 	        String enc_msg = Encrypter.encrypt(msg);
-			try {
-				client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
-				client.registerSimpleHandler(new MessageHandler());
-				client.connect("jynxR" + phone_id, true, (short) 240);
-				} catch (MqttException e) {
-					e.printStackTrace();
-				}
-			
+	        if(client == null)
+	        {
 				try {
-					client.publish("REGISTER", enc_msg.getBytes() ,pubQoS, false);
+					client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
+					client.registerSimpleHandler(new MessageHandler());
+					client.connect("jynxR" + phone_id, true, (short) 240);
+					} catch (MqttException e) {
+						e.printStackTrace();
+					}
+	        }
+				try {
 					Log.d("MQTT",enc_msg);
+					client.publish("REGISTER", enc_msg.getBytes() ,pubQoS, false);
 				} catch (MqttNotConnectedException e1) {
 					e1.printStackTrace();
 				} catch (MqttPersistenceException e1) {
@@ -188,14 +190,18 @@ public class StartPage extends Activity {
 					e1.printStackTrace();
 				} catch (MqttException e1) {
 					e1.printStackTrace();
-				}	
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 				
 	        pd = ProgressDialog.show(this, "Registering", "Please Wait..", true, false);
 	        new Thread() {
 	        	public void run(){
-	        		while(registerResponse==0){
+	        		int t = 0;
+	        		while(registerResponse==0 && t<=5000){
 	        			try {
 							Thread.sleep(100);
+							t += 100;
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
@@ -204,6 +210,8 @@ public class StartPage extends Activity {
 	        			handlerReg.sendMessage(Message.obtain(handlerReg, 1));
 	        		else if(registerResponse==2)
 	        			handlerReg.sendMessage(Message.obtain(handlerReg, 2));
+	        		else if(registerResponse==0)
+	        			handlerReg.sendMessage(Message.obtain(handlerReg, 3));
 	        	}
 	        }.start();
 	        
@@ -233,6 +241,10 @@ public class StartPage extends Activity {
 	            {
 	            	Toast.makeText(getBaseContext(), "Registration Failed, Try Again later", Toast.LENGTH_SHORT).show();
 	            }
+	            else if(msg.what==3)
+	            {
+	            	Toast.makeText(getBaseContext(), "Registration Timedout, Try Again later", Toast.LENGTH_SHORT).show();
+	            }
 	    }
 	};
 	  
@@ -240,6 +252,8 @@ public class StartPage extends Activity {
 	{
 		String msg = phone_id+"#"+username+"#"+password;
 		String enc_msg = Encrypter.encrypt(msg);
+		if(client == null)
+		{
 		try {
 			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
 			client.registerSimpleHandler(new MessageHandler());
@@ -247,7 +261,7 @@ public class StartPage extends Activity {
 			} catch (MqttException e) {
 				e.printStackTrace();
 			}
-		
+		}
 			try {
 				client.publish("LOGIN", enc_msg.getBytes() ,pubQoS, false);
 				Log.d("MQTT",enc_msg);
@@ -263,15 +277,19 @@ public class StartPage extends Activity {
 			} catch (MqttException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
-			}	
+			}	catch (Exception e) {
+				e.printStackTrace();
+			}
 			
 			pd = ProgressDialog.show(this, "Logging in", "Please Wait..", true, false);
 	        
 	        new Thread() {
 	        	public void run(){
-	        		while(loginResponse==0){
+	        		int t = 0;
+	        		while(loginResponse==0 && t<=5000){
 	        			try {
 							Thread.sleep(100);
+							t += 100;
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -281,6 +299,8 @@ public class StartPage extends Activity {
 	        			handlerLog.sendMessage(Message.obtain(handlerLog, 1));
 	        		else if(loginResponse==2)
 	        			handlerLog.sendMessage(Message.obtain(handlerLog, 2));
+	        		else if(loginResponse==0)
+	        			handlerLog.sendMessage(Message.obtain(handlerLog, 3));
 	        	}
 	        }.start();
 	        
@@ -312,6 +332,10 @@ public class StartPage extends Activity {
 	            else if(msg.what==2)
 	            {
 	            	Toast.makeText(getBaseContext(), "Login Incorrect. Try Again!", Toast.LENGTH_SHORT).show();
+	            }
+	            else if(msg.what==3)
+	            {
+	            	Toast.makeText(getBaseContext(), "Login Timedout. Try Again!", Toast.LENGTH_SHORT).show();
 	            }
 	    }
 	};

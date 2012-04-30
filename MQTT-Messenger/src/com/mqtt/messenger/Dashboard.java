@@ -389,15 +389,20 @@ public class Dashboard extends Activity {
     		publishToIncoming("TOPICS", username+"#"+password+"#REQUEST");
             new Thread() {
             	public void run(){
-            		while(listOfTopicsUpdated==false){
+            		int t = 0;
+            		while(listOfTopicsUpdated==false && t<=5000){
             			try {
     						Thread.sleep(100);
+    						t += 100;
     					} catch (InterruptedException e) {
     						// TODO Auto-generated catch block
     						e.printStackTrace();
     					}
             		}
-            			handlerTopImmed.sendEmptyMessage(0);
+            		if(listOfTopicsUpdated==true)
+            			handlerTopImmed.sendMessage(Message.obtain(handlerTopImmed, 1));
+            		else
+            			handlerTopImmed.sendMessage(Message.obtain(handlerTopImmed, 2));
             	}
             }.start();
     		
@@ -409,36 +414,42 @@ public class Dashboard extends Activity {
                 
         		pd.dismiss();
         		listOfTopicsUpdated = false;
-                        	
-        		if(listOfTopics!=null){
-	        		LayoutInflater factory1 = LayoutInflater.from(Dashboard.this);
-	                final View textEntryView1 = factory1.inflate(R.layout.dialogsubscribe, null);
-	                AlertDialog.Builder alert1 = new AlertDialog.Builder(Dashboard.this);
-	                
-	                spin = (Spinner) textEntryView1.findViewById(R.id.spinnerTopic);
-	                aa = new ArrayAdapter<String>(Dashboard.this, android.R.layout.simple_spinner_item, listOfTopics);
-	                spin.setAdapter(aa);
-	                
-	                alert1.setTitle("Subscribe");
-	            	alert1.setView(textEntryView1);
-	            	
-	            	alert1.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-	            	public void onClick(DialogInterface dialog, int whichButton) {
-	            		// Do something with value!
-	            		 
-	            		Spinner spin = (Spinner) textEntryView1.findViewById(R.id.spinnerTopic);
-	            		mqttService.subscribeToTopic( spin.getSelectedItem().toString());
-	            		MQTTService.addTopicSubscribed(spin.getSelectedItem().toString());
-	            	  }
-	            	});
-	            	alert1.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-	            	  public void onClick(DialogInterface dialog, int whichButton) {
-	            	    // Canceled.
-	            	  }
-	            	});
-	            	alert1.show(); 
+        		
+        		if(msg.what==1)
+        		{
+	        		if(listOfTopics!=null){
+		        		LayoutInflater factory1 = LayoutInflater.from(Dashboard.this);
+		                final View textEntryView1 = factory1.inflate(R.layout.dialogsubscribe, null);
+		                AlertDialog.Builder alert1 = new AlertDialog.Builder(Dashboard.this);
+		                
+		                spin = (Spinner) textEntryView1.findViewById(R.id.spinnerTopic);
+		                aa = new ArrayAdapter<String>(Dashboard.this, android.R.layout.simple_spinner_item, listOfTopics);
+		                spin.setAdapter(aa);
+		                
+		                alert1.setTitle("Subscribe");
+		            	alert1.setView(textEntryView1);
+		            	
+		            	alert1.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+		            	public void onClick(DialogInterface dialog, int whichButton) {
+		            		// Do something with value!
+		            		 
+		            		Spinner spin = (Spinner) textEntryView1.findViewById(R.id.spinnerTopic);
+		            		mqttService.subscribeToTopic( spin.getSelectedItem().toString());
+		            		MQTTService.addTopicSubscribed(spin.getSelectedItem().toString());
+		            	  }
+		            	});
+		            	alert1.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+		            	  public void onClick(DialogInterface dialog, int whichButton) {
+		            	    // Canceled.
+		            	  }
+		            	});
+		            	alert1.show(); 
+	        		}
         		}
-                
+        		else if(msg.what==2)
+        		{
+        			Toast.makeText(getBaseContext(), "Fetching Topics Timedout, Try Again Later!", Toast.LENGTH_SHORT).show();
+        		}
         }
     };
     
