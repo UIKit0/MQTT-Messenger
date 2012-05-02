@@ -28,12 +28,11 @@
 
     <EditText
         android:id="@+id/editText3"
-        android:text="192.168.1.3"
+        android:hint="Server IP Address"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:freezesText="true"
         android:inputType="textEmailAddress" >
-        <requestFocus />
         </EditText>
 
     <LinearLayout
@@ -70,7 +69,7 @@
         android:id="@+id/editText1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="dineshbabu"
+        android:hint="Enter your username"
         android:freezesText="true"
          >
     </EditText>
@@ -87,7 +86,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="textPassword"
-        android:text="mamama"
+        android:hint="Enter your password"
         android:freezesText="true"
          />
 

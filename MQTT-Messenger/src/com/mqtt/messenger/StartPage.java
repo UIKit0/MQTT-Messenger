@@ -2,6 +2,7 @@ package com.mqtt.messenger;
 
 import java.util.regex.Pattern;
 
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -38,10 +39,9 @@ public class StartPage extends Activity {
 	private int loginResponse = 0;
 	private String phone_id;
 	private ProgressDialog pd;
-	private MqttClient client = null;
+	private MqttClient client = null, clientO = null;
 	static String broker = null, broker_incoming = null, broker_outgoing = null;
 	int incomingPort, outgoingPort;
-	
 	private int pubQoS = 2 ;
 	private int[] subQoS = { 2 };
 	
@@ -64,7 +64,8 @@ public class StartPage extends Activity {
 		{
 			//Info Dialog Builder
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder.setMessage("\nAn Android Application for Realtime Messaging System using MQTT\n\nTeam Members:\n\nDinesh Babu K G\nJagadeesh M\nVasantharajan S");
+			builder.setMessage("\nAn Android Application for Realtime Messaging System using MQTT\n\nGuide:\n\nProf R Mohan\n\nTeam:\n\nDinesh Babu K G\nJagadeesh M\nVasantharajan S");
+			builder.setPositiveButton("Ok",null);
 			alert = builder.create();
 		}
 		Log.d("MQTT","Exiting OnCreate");
@@ -145,10 +146,10 @@ public class StartPage extends Activity {
 		broker_outgoing = "tcp://" + broker + ":" + outgoingPort;
 		
 		try {
-			client = (MqttClient) MqttClient.createMqttClient(broker_outgoing, null);
-			client.registerSimpleHandler(new MessageHandler());
-			client.connect("jynxRV" + phone_id, true, (short) 240);
-			client.subscribe(new String[]{phone_id}, subQoS);
+			clientO = (MqttClient) MqttClient.createMqttClient(broker_outgoing, null);
+			clientO.registerSimpleHandler(new MessageHandler());
+			clientO.connect("jynxRV" + phone_id, true, (short) 240);
+			clientO.subscribe(new String[]{phone_id}, subQoS);
 			} catch (MqttException e) {
 				e.printStackTrace();
 			}

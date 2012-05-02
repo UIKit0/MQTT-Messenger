@@ -91,7 +91,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
     public static ArrayList<String> listOfTopicsSubscribed = new ArrayList<String>();
 	public static List<String>mqttMessages = new LinkedList<String>();
-	public static int mqttMessagesMAXSIZE = 50;
+	public static int mqttMessagesMAXSIZE = 100;
 	
     // defaults - this sample uses very basic defaults for it's interactions
     //   with message brokers

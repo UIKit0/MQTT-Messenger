@@ -78,9 +78,9 @@ public class Dashboard extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		//Info Dialog Builder
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setMessage("\nAn Android Application for Realtime Messaging System using MQTT\n\nTeam Members:\n\nDinesh Babu K G\nJagadeesh M\nVasantharajan S");
+		builder.setMessage("\nAn Android Application for Realtime Messaging System using MQTT\n\nGuide:\n\nProf R Mohan\n\nTeam:\n\nDinesh Babu K G\nJagadeesh M\nVasantharajan S");
+		builder.setPositiveButton("Ok",null);
 		alert = builder.create();
-		
 		messageView = (TextView) findViewById(R.id.message);
 		scroller = (ScrollView) findViewById(R.id.scrollView1);
 	
@@ -204,6 +204,10 @@ public class Dashboard extends Activity {
             	{
             		Toast.makeText(getBaseContext(), "Topic Creation Failed!", Toast.LENGTH_SHORT).show();
             	}
+            	else if(newData.equalsIgnoreCase("MESSAGE_FILTERED"))
+            	{
+            		Toast.makeText(getBaseContext(), "Your Message has been Filtered!", Toast.LENGTH_SHORT).show();
+            	}
             }
             else {
 
@@ -319,6 +323,7 @@ public class Dashboard extends Activity {
 		                    		Spinner spin = (Spinner) textEntryView2.findViewById(R.id.spinnerTopic);
 		                    		mqttService.unsubscribeToTopic(spin.getSelectedItem().toString());
 		                    		MQTTService.removeTopicSubscribed(spin.getSelectedItem().toString());
+		                    		Toast.makeText(getBaseContext(), "UnSubscribed Successfully!", Toast.LENGTH_SHORT).show();
 		                    	  }
 		                    	});
 		                    	alert2.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -436,6 +441,7 @@ public class Dashboard extends Activity {
 		            		Spinner spin = (Spinner) textEntryView1.findViewById(R.id.spinnerTopic);
 		            		mqttService.subscribeToTopic( spin.getSelectedItem().toString());
 		            		MQTTService.addTopicSubscribed(spin.getSelectedItem().toString());
+		            		Toast.makeText(getBaseContext(), "Subscribed Successfully!", Toast.LENGTH_SHORT).show();
 		            	  }
 		            	});
 		            	alert1.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
