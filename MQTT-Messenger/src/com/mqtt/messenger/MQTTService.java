@@ -90,8 +90,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     private String          initialTopicName     = "";					    
 
     public static ArrayList<String> listOfTopicsSubscribed = new ArrayList<String>();
-	public static List<String>mqttMessages = new LinkedList<String>();
-	public static int mqttMessagesMAXSIZE = 100;
+	//public static List<String>mqttMessages = new LinkedList<String>();
+	//public static int mqttMessagesMAXSIZE = 100;
 	
     // defaults - this sample uses very basic defaults for it's interactions
     //   with message brokers
@@ -283,8 +283,29 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         super.onDestroy();
         
         SERVICE_STAT = false;
+        
+        //unsubscribe from all the topics
+        try {
+			mqttClient.unsubscribe(listOfTopicsSubscribed.toArray(new String[listOfTopicsSubscribed.size()]));
+		} catch (MqttNotConnectedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IllegalArgumentException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (MqttException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+        
         listOfTopicsSubscribed.clear();
-        mqttMessages.clear();
+        //mqttMessages.clear();
+        
+        //Clear all persistant Messages!
+        SharedPreferences myMessages = this.getSharedPreferences("myMessages", MODE_PRIVATE);
+        SharedPreferences.Editor prefsEditor = myMessages.edit();
+        prefsEditor.clear();
+        prefsEditor.commit();
         
         disconnectFromBroker();
 
@@ -663,11 +684,19 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             if(topic.equals(username)==false)
             {   
 	            //Write to Message Cache
-            	String msg = "\nTopic     :" + topic + "\nMessage:" + messageBody +"\n\n";
-            	//String msg = "\nTopic:   " + topic + "\nMessage: " + messageBody +"\n\n";
+            	/*
             	if(mqttMessages.size()==mqttMessagesMAXSIZE)
             		mqttMessages.remove(0);
-            	mqttMessages.add(msg);
+            	mqttMessages.add(msg); */
+            	
+            	String msg = "\nTopic: " + topic + "\nMessage: " + messageBody +"\n\n";
+        		SharedPreferences myMessages = this.getSharedPreferences("myMessages", MODE_PRIVATE);
+            	int count = myMessages.getInt("count", 0);
+		        SharedPreferences.Editor prefsEditor = myMessages.edit();		        
+		        count++;
+		        prefsEditor.putInt("count", count);
+		        prefsEditor.putString(""+count, msg);
+		        prefsEditor.commit();
             }
             //
             // inform the user (for times when the Activity UI isn't running)
@@ -806,6 +835,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             Log.e("mqtt", "unregister failed", eee);
         }
 
+       	
         try
         {
             if (mqttClient != null)

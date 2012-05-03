@@ -1,5 +1,10 @@
 package com.mqtt.messenger;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -67,8 +72,6 @@ public class Dashboard extends Activity {
 	
 	int pubQoS = 2;
 	
-	private String topicName;
-	
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -114,10 +117,18 @@ public class Dashboard extends Activity {
 		phone_id = Settings.System.getString(getContentResolver(),Secure.ANDROID_ID);
 		
         //fetch old messages to do..
+		/*messageView.append(""+MQTTService.mqttMessages.size());
         for(String s : MQTTService.mqttMessages)
         {
         	messageView.append(s);
-        }
+        }*/
+        
+        SharedPreferences myMessages = this.getSharedPreferences("myMessages", MODE_PRIVATE);
+        int count = myMessages.getInt("count", 0);
+    	for(int i =1; i <= count; i++){
+    		messageView.append(myMessages.getString(""+i, ""));            
+    	 }
+    	
         
 }
 
@@ -190,7 +201,7 @@ public class Dashboard extends Activity {
             	{
             		listOfTopicsUpdated = true;
             		listOfTopics = newData.substring(7).split("\\#");
-            		Toast.makeText(getBaseContext(), "Topics Updated!", Toast.LENGTH_SHORT).show();
+            		//Toast.makeText(getBaseContext(), "Topics Updated!", Toast.LENGTH_SHORT).show();
             	}
             	else if(newData.equalsIgnoreCase("NO_TOPIC"))
             	{
@@ -213,7 +224,7 @@ public class Dashboard extends Activity {
             }
             else {
 
-            	messageView.append("\nTopic     :" + newTopic + "\nMessage:" + newData +"\n\n");
+            	messageView.append("\nTopic: " + newTopic + "\nMessage: " + newData +"\n\n");
                 
             	scroller.post(new Runnable() {
 				   public void run() {
@@ -266,18 +277,17 @@ public class Dashboard extends Activity {
 	                    			finalTopic = spin.getSelectedItem().toString();
 	                    			
 	                    			String msg2 = username+"#"+password+"#"+topicMessage.getText().toString();
-	                    			String enc_msg = Encrypter.encrypt(msg2);
+	                    			publishToIncoming(finalTopic,msg2);
+	                    			/*String enc_msg = Encrypter.encrypt(msg2);
 		                    		try {
 		                    			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
 		                    			client.registerSimpleHandler(new MessageHandler());
 		                    			client.connect("Temp" + phone_id, true, (short) 240);
-		                    			
 		                    			client.publish(finalTopic, enc_msg.getBytes(), pubQoS, false);
-		                    			mqttService.subscribeToTopic(finalTopic);
-		                    			
+		                    			//mqttService.subscribeToTopic(finalTopic);
 		                    			} catch (MqttException e) {
 		                    				e.printStackTrace();
-		                    			}
+		                    			}*/
 		                    	  }
 		                    	});
 		                    	alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -352,18 +362,17 @@ public class Dashboard extends Activity {
                     		 
                     		EditText topic = (EditText) textEntryView3.findViewById(R.id.editCreateTopic);
                     		
-                    		topicName = topic.getText().toString();
                 			String msg = username+"#"+password+"#"+topic.getText().toString();
-                			String enc_msg = Encrypter.encrypt(msg);
-                    		try {
+                			//String enc_msg = Encrypter.encrypt(msg);
+                			publishToIncoming("CREATE_TOPIC",msg);
+                    		/*try {
                     			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
                     			client.registerSimpleHandler(new MessageHandler());
                     			client.connect("Temp" + phone_id, true, (short) 240);
                     			client.publish("CREATE_TOPIC", enc_msg.getBytes() , pubQoS, false);
-                    			//mqttService.subscribeToTopic(topicName);
                     			} catch (MqttException e) {
                     				e.printStackTrace();
-                    			}
+                    			}*/
 	                    	
 
                     	  }
@@ -380,6 +389,8 @@ public class Dashboard extends Activity {
     public void publishToIncoming(String topic, String message)
     {
     	String enc_msg = Encrypter.encrypt(message);
+    	if(client == null)
+    	{
 		try {
 			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
 			client.registerSimpleHandler(new MessageHandler());
@@ -388,6 +399,15 @@ public class Dashboard extends Activity {
 			} catch (MqttException e) {
 				e.printStackTrace();
 			}
+    	}
+    	else
+    	{
+    		try {
+    			client.publish(topic, enc_msg.getBytes(), pubQoS, false);
+    			} catch (MqttException e) {
+    				e.printStackTrace();
+    			}    		
+    	}
     }
     
     public void getListOfTopicsImmed()
@@ -428,8 +448,18 @@ public class Dashboard extends Activity {
 		                final View textEntryView1 = factory1.inflate(R.layout.dialogsubscribe, null);
 		                AlertDialog.Builder alert1 = new AlertDialog.Builder(Dashboard.this);
 		                
+
+		                //Remove all the subscribed topics!
+		                List<String> LOTList = new ArrayList<String>(Arrays.asList(listOfTopics));
+		                for (String s : MQTTService.listOfTopicsSubscribed) {
+		                    if (LOTList.contains(s)) {
+		                    	LOTList.remove(s);
+		                    }
+		                }
+		                String[] finalTopicList = LOTList.toArray(new String[LOTList.size()]);
+		                
 		                spin = (Spinner) textEntryView1.findViewById(R.id.spinnerTopic);
-		                aa = new ArrayAdapter<String>(Dashboard.this, android.R.layout.simple_spinner_item, listOfTopics);
+		                aa = new ArrayAdapter<String>(Dashboard.this, android.R.layout.simple_spinner_item, finalTopicList);
 		                spin.setAdapter(aa);
 		                
 		                alert1.setTitle("Subscribe");
