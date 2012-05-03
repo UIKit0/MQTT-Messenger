@@ -67,6 +67,8 @@ public class Dashboard extends Activity {
 	
 	int pubQoS = 2;
 	
+	private String topicName;
+	
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -211,7 +213,7 @@ public class Dashboard extends Activity {
             }
             else {
 
-            	messageView.append("\nTopic:   " + newTopic + "\nMessage: " + newData +"\n\n");
+            	messageView.append("\nTopic     :" + newTopic + "\nMessage:" + newData +"\n\n");
                 
             	scroller.post(new Runnable() {
 				   public void run() {
@@ -350,7 +352,7 @@ public class Dashboard extends Activity {
                     		 
                     		EditText topic = (EditText) textEntryView3.findViewById(R.id.editCreateTopic);
                     		
-                    		String topicName = topic.getText().toString();
+                    		topicName = topic.getText().toString();
                 			String msg = username+"#"+password+"#"+topic.getText().toString();
                 			String enc_msg = Encrypter.encrypt(msg);
                     		try {
@@ -358,8 +360,7 @@ public class Dashboard extends Activity {
                     			client.registerSimpleHandler(new MessageHandler());
                     			client.connect("Temp" + phone_id, true, (short) 240);
                     			client.publish("CREATE_TOPIC", enc_msg.getBytes() , pubQoS, false);
-        	            		MQTTService.addTopicSubscribed(topicName);
-                    			mqttService.subscribeToTopic(topicName);
+                    			//mqttService.subscribeToTopic(topicName);
                     			} catch (MqttException e) {
                     				e.printStackTrace();
                     			}

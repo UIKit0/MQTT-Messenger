@@ -663,7 +663,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             if(topic.equals(username)==false)
             {   
 	            //Write to Message Cache
-            	String msg = "\nTopic:   " + topic + "\nMessage: " + messageBody +"\n\n";
+            	String msg = "\nTopic     :" + topic + "\nMessage:" + messageBody +"\n\n";
+            	//String msg = "\nTopic:   " + topic + "\nMessage: " + messageBody +"\n\n";
             	if(mqttMessages.size()==mqttMessagesMAXSIZE)
             		mqttMessages.remove(0);
             	mqttMessages.add(msg);

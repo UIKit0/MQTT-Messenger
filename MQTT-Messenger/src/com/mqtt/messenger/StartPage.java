@@ -145,6 +145,9 @@ public class StartPage extends Activity {
 		broker_incoming = "tcp://" + broker + ":" + incomingPort;
 		broker_outgoing = "tcp://" + broker + ":" + outgoingPort;
 		
+		//Create Outgoing Client
+		if(clientO == null)
+		{
 		try {
 			clientO = (MqttClient) MqttClient.createMqttClient(broker_outgoing, null);
 			clientO.registerSimpleHandler(new MessageHandler());
@@ -153,6 +156,19 @@ public class StartPage extends Activity {
 			} catch (MqttException e) {
 				e.printStackTrace();
 			}
+		}
+		
+		//Create Incoming Client
+		if(client == null)
+		{
+		try {
+			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
+			client.registerSimpleHandler(new MessageHandler());
+			client.connect("jynxL" + phone_id, true, (short) 240);
+			} catch (MqttException e) {
+				e.printStackTrace();
+			}
+		}
 		
 		if( ((Button)v).getText().equals("Login"))
 		{
@@ -170,16 +186,7 @@ public class StartPage extends Activity {
 
 	        String msg = phone_id+"#"+username+"#"+password;
 	        String enc_msg = Encrypter.encrypt(msg);
-	        if(client == null)
-	        {
-				try {
-					client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
-					client.registerSimpleHandler(new MessageHandler());
-					client.connect("jynxR" + phone_id, true, (short) 240);
-					} catch (MqttException e) {
-						e.printStackTrace();
-					}
-	        }
+	        
 				try {
 					Log.d("MQTT",enc_msg);
 					client.publish("REGISTER", enc_msg.getBytes() ,pubQoS, false);
@@ -245,6 +252,9 @@ public class StartPage extends Activity {
 	            else if(msg.what==3)
 	            {
 	            	Toast.makeText(getBaseContext(), "Registration Timedout, Try Again later", Toast.LENGTH_SHORT).show();
+	            	clientO.terminate();
+	            	client.terminate();
+	            	client = null; clientO = null;
 	            }
 	    }
 	};
@@ -253,16 +263,7 @@ public class StartPage extends Activity {
 	{
 		String msg = phone_id+"#"+username+"#"+password;
 		String enc_msg = Encrypter.encrypt(msg);
-		if(client == null)
-		{
-		try {
-			client = (MqttClient) MqttClient.createMqttClient(broker_incoming, null);
-			client.registerSimpleHandler(new MessageHandler());
-			client.connect("jynxL" + phone_id, true, (short) 240);
-			} catch (MqttException e) {
-				e.printStackTrace();
-			}
-		}
+		
 			try {
 				client.publish("LOGIN", enc_msg.getBytes() ,pubQoS, false);
 				Log.d("MQTT",enc_msg);
@@ -337,6 +338,9 @@ public class StartPage extends Activity {
 	            else if(msg.what==3)
 	            {
 	            	Toast.makeText(getBaseContext(), "Login Timedout. Try Again!", Toast.LENGTH_SHORT).show();
+	            	clientO.terminate();
+	            	client.terminate();
+	            	client = null; clientO = null;
 	            }
 	    }
 	};
