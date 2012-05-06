@@ -1,6 +1,7 @@
 package com.mqtt.messenger;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.List;
@@ -89,9 +90,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     private String          brokerHostName;			//Custom Server
     private String          initialTopicName     = "";					    
 
-    public static ArrayList<String> listOfTopicsSubscribed = new ArrayList<String>();
-	//public static List<String>mqttMessages = new LinkedList<String>();
-	//public static int mqttMessagesMAXSIZE = 100;
+    //public static ArrayList<String> listOfTopicsSubscribed = new ArrayList<String>();
 	
     // defaults - this sample uses very basic defaults for it's interactions
     //   with message brokers
@@ -284,8 +283,14 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         
         SERVICE_STAT = false;
         
+        SharedPreferences myTopics = this.getSharedPreferences("myTopicsSubbed", MODE_PRIVATE);
+    	String topicsString = myTopics.getString("topics", "");
+    	String[] topicsArray = topicsString.split("\\|");
+    	ArrayList<String> listOfTopicsSubscribed = new ArrayList<String>(Arrays.asList(topicsArray));
+    	listOfTopicsSubscribed.remove(0);
+    	
         //unsubscribe from all the topics
-        try {
+         try {
 			mqttClient.unsubscribe(listOfTopicsSubscribed.toArray(new String[listOfTopicsSubscribed.size()]));
 		} catch (MqttNotConnectedException e1) {
 			// TODO Auto-generated catch block
@@ -298,12 +303,17 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 			e1.printStackTrace();
 		}
         
-        listOfTopicsSubscribed.clear();
-        //mqttMessages.clear();
+        //Clear persistent topic subscribed
+        SharedPreferences.Editor prefsEditor = myTopics.edit();
+        prefsEditor.clear();
+        prefsEditor.commit()
         
-        //Clear all persistant Messages!
+        //mqttMessages.clear();
+        ;
+        
+        //Clear all persistent Messages!
         SharedPreferences myMessages = this.getSharedPreferences("myMessages", MODE_PRIVATE);
-        SharedPreferences.Editor prefsEditor = myMessages.edit();
+        prefsEditor = myMessages.edit();
         prefsEditor.clear();
         prefsEditor.commit();
         
@@ -518,7 +528,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
         }
     }
 
-    public static void addTopicSubscribed(String topic)
+
+    /*public static void addTopicSubscribed(String topic)
     {
     	listOfTopicsSubscribed.add(topic);
     }
@@ -531,7 +542,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
     	            result.add(item);
     	    
     	    listOfTopicsSubscribed = result;
-    }
+    }*/
     
     public MQTTConnectionStatus getConnectionStatus()
     {

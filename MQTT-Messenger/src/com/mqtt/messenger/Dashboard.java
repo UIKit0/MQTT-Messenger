@@ -256,12 +256,13 @@ public class Dashboard extends Activity {
     
     public void performMQTTAction(final int id)
     {
+    	ArrayList<String> listOfTopicsSubscribed = getTopicsSubscribed();
     
 	                    switch(id)
 	                    {
 	                    case 1:
 	                    	
-	                    	if(MQTTService.listOfTopicsSubscribed.size()>0)
+	                    	if(listOfTopicsSubscribed.size()>0)
 	                    	{
 		                    	LayoutInflater factory = LayoutInflater.from(this);
 		                        final View textEntryView = factory.inflate(R.layout.dialogpublish, null);
@@ -269,8 +270,8 @@ public class Dashboard extends Activity {
 		                    	
 		                        spin = (Spinner) textEntryView.findViewById(R.id.spinnerTopic);
 		                        
-		                        String[] topicsSubbed = new String[ MQTTService.listOfTopicsSubscribed.size()];
-		                        topicsSubbed = MQTTService.listOfTopicsSubscribed.toArray(topicsSubbed);
+		                        String[] topicsSubbed = new String[listOfTopicsSubscribed.size()];
+		                        topicsSubbed = listOfTopicsSubscribed.toArray(topicsSubbed);
 		                        
 		                        aa = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, topicsSubbed);
 		                        spin.setAdapter(aa);
@@ -319,7 +320,7 @@ public class Dashboard extends Activity {
 	                    		break;
 	                    case 3:
 	                    	
-	                    	if(MQTTService.listOfTopicsSubscribed.isEmpty()==true)
+	                    	if(listOfTopicsSubscribed.isEmpty()==true)
 	                    	{
 	                    		Toast.makeText(getBaseContext(), "Not Subscribed to Any Topic!", Toast.LENGTH_SHORT).show();
 	                    	}
@@ -331,8 +332,8 @@ public class Dashboard extends Activity {
 		                    	
 		                        spin = (Spinner) textEntryView2.findViewById(R.id.spinnerTopic);
 		                        
-		                        String[] topicsSubbed = new String[ MQTTService.listOfTopicsSubscribed.size()];
-		                        topicsSubbed = MQTTService.listOfTopicsSubscribed.toArray(topicsSubbed);
+		                        String[] topicsSubbed = new String[ listOfTopicsSubscribed.size()];
+		                        topicsSubbed = listOfTopicsSubscribed.toArray(topicsSubbed);
 		                        
 		                        aa = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, topicsSubbed);	
 		                        spin.setAdapter(aa);
@@ -346,7 +347,7 @@ public class Dashboard extends Activity {
 		                    		
 		                    		Spinner spin = (Spinner) textEntryView2.findViewById(R.id.spinnerTopic);
 		                    		mqttService.unsubscribeToTopic(spin.getSelectedItem().toString());
-		                    		MQTTService.removeTopicSubscribed(spin.getSelectedItem().toString());
+		                    		removeTopicSubscribed(spin.getSelectedItem().toString());
 		                    		Toast.makeText(getBaseContext(), "UnSubscribed Successfully!", Toast.LENGTH_SHORT).show();
 		                    	  }
 		                    	});
@@ -463,7 +464,8 @@ public class Dashboard extends Activity {
 
 		                //Remove all the subscribed topics!
 		                List<String> LOTList = new ArrayList<String>(Arrays.asList(listOfTopics));
-		                for (String s : MQTTService.listOfTopicsSubscribed) {
+		                ArrayList<String> listOfTopicsSubscribed = getTopicsSubscribed();
+		                for (String s : listOfTopicsSubscribed) {
 		                    if (LOTList.contains(s)) {
 		                    	LOTList.remove(s);
 		                    }
@@ -483,7 +485,7 @@ public class Dashboard extends Activity {
 		            		 
 		            		Spinner spin = (Spinner) textEntryView1.findViewById(R.id.spinnerTopic);
 		            		mqttService.subscribeToTopic( spin.getSelectedItem().toString());
-		            		MQTTService.addTopicSubscribed(spin.getSelectedItem().toString());
+		            		addTopicSubscribed(spin.getSelectedItem().toString());
 		            		Toast.makeText(getBaseContext(), "Subscribed Successfully!", Toast.LENGTH_SHORT).show();
 		            	  }
 		            	});
@@ -501,6 +503,60 @@ public class Dashboard extends Activity {
         		}
         }
     };
+    
+    public ArrayList<String> getTopicsSubscribed()
+    {
+    	SharedPreferences myTopics = this.getSharedPreferences("myTopicsSubbed", MODE_PRIVATE);
+    	String topicsString = myTopics.getString("topics", "");
+    	String[] topicsArray = topicsString.split("\\|");
+    	
+    	ArrayList<String> listOfTopicsSubscribed = new ArrayList<String>(Arrays.asList(topicsArray));
+    	listOfTopicsSubscribed.remove(0);
+    	return listOfTopicsSubscribed;
+    }
+    
+    public void addTopicSubscribed(String topic)
+    {
+    	SharedPreferences myTopics = this.getSharedPreferences("myTopicsSubbed", MODE_PRIVATE);
+    	String topicsString = myTopics.getString("topics", "");
+    	SharedPreferences.Editor prefsEditor = myTopics.edit();
+    	if(topicsString.equalsIgnoreCase(""))
+    	{
+    		topicsString = "|" + topic;
+	        
+    	}
+    	else
+    	{
+    		topicsString += "|"	+ topic;
+    	}
+    	prefsEditor.putString("topics",topicsString);
+	    prefsEditor.commit();    		
+    }
+    
+    public void removeTopicSubscribed(String topic)
+    {
+    	SharedPreferences myTopics = this.getSharedPreferences("myTopicsSubbed", MODE_PRIVATE);
+    	String topicsString = myTopics.getString("topics", "");
+    	SharedPreferences.Editor prefsEditor = myTopics.edit();
+    	if(topicsString.equalsIgnoreCase(""))
+    	{
+    		//do nothing
+    	}
+    	else
+    	{
+    		String[] topicsArray = topicsString.split("\\|");
+    		String topicsStringnew = "";
+    		for(String i : topicsArray)
+    		{
+    			if(i.equalsIgnoreCase(topic)==false && i.isEmpty()==false)
+    				topicsStringnew += "|" + i;
+    		}
+    		topicsString = topicsStringnew;
+    	}
+    	prefsEditor.putString("topics",topicsString);
+	    prefsEditor.commit();    	
+    }
+    
     
 	@SuppressWarnings("unused")
 	private class MessageHandler implements MqttSimpleCallback 
