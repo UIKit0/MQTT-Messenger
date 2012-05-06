@@ -705,7 +705,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
             /*if(!topic.equals(initialTopicName))	//Check if the Topic is NOT a Server Response */
             
             if(Dashboard.active==false)
-            	notifyUser("New Message Received", topic, messageBody);
+            		notifyUser("New Message Received", topic, messageBody);
 
         // receiving this message will have kept the connection alive for us, so
         //  we take advantage of this to postpone the next scheduled ping

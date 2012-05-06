@@ -138,6 +138,18 @@ public class Dashboard extends Activity {
 		super.onStart();
 		active = true;
 	}
+	@Override
+	public void onResume()
+	{
+		super.onResume();
+		active = true;
+	}
+	@Override
+	public void onPause()
+	{
+		super.onPause();
+		active = false;
+	}
     @Override  
     public void onStop(){
     	super.onStop();
